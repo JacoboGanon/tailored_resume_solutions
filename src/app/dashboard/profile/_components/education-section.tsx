@@ -90,14 +90,13 @@ export function EducationSection({
 	};
 
 	const handleEdit = (edu: portfolio["educations"][number]) => {
-		const minors = edu.minors ? JSON.parse(edu.minors) : [""];
 		setEditingEdu(edu);
 		setFormData({
 			institution: edu.institution,
 			degree: edu.degree,
 			fieldOfStudy: edu.fieldOfStudy,
 			gpa: edu.gpa || "",
-			minors: minors.length > 0 ? minors : [""],
+			minors: edu.minors.length > 0 ? edu.minors : [""],
 			startDate: new Date(edu.startDate).toISOString().slice(0, 7),
 			endDate: edu.endDate
 				? new Date(edu.endDate).toISOString().slice(0, 7)
@@ -385,7 +384,6 @@ export function EducationSection({
 				) : (
 					<div className="space-y-4">
 						{portfolio?.educations?.map((edu) => {
-							const minors = edu.minors ? JSON.parse(edu.minors) : [];
 							return (
 								<div className="rounded-lg border p-4" key={edu.id}>
 									<div className="flex items-start justify-between">
@@ -412,8 +410,10 @@ export function EducationSection({
 														})}
 											</p>
 											{edu.gpa && <p className="text-sm">GPA: {edu.gpa}</p>}
-											{minors.length > 0 && (
-												<p className="text-sm">Minors: {minors.join(", ")}</p>
+											{edu.minors.length > 0 && (
+												<p className="text-sm">
+													Minors: {edu.minors.join(", ")}
+												</p>
 											)}
 										</div>
 										<div className="flex gap-2">

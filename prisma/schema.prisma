@@ -6,12 +6,8 @@ generator client {
   output   = "../generated/prisma"
 }
 
-// NOTE: When using mysql or sqlserver, uncomment the //@db.Text annotations in model Account below
-// Further reading:
-// https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
-
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -29,10 +25,10 @@ model Post {
 
 model User {
   id            String    @id
-  name          String //@db.Text
+  name          String    @db.Text
   email         String
   emailVerified Boolean   @default(false)
-  image         String? //@db.Text
+  image         String?   @db.Text
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
   sessions      Session[]
@@ -51,8 +47,8 @@ model Session {
   token     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  ipAddress String? //@db.Text
-  userAgent String? //@db.Text
+  ipAddress String?  @db.Text
+  userAgent String?  @db.Text
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -62,17 +58,17 @@ model Session {
 
 model Account {
   id                    String    @id
-  accountId             String //@db.Text
-  providerId            String //@db.Text
+  accountId             String    @db.Text
+  providerId            String    @db.Text
   userId                String
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken           String? //@db.Text
-  refreshToken          String? //@db.Text
-  idToken               String? //@db.Text
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
   accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
-  scope                 String? //@db.Text
-  password              String? //@db.Text
+  scope                 String?   @db.Text
+  password              String?   @db.Text
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -81,8 +77,8 @@ model Account {
 
 model Verification {
   id         String   @id
-  identifier String //@db.Text
-  value      String //@db.Text
+  identifier String   @db.Text
+  value      String   @db.Text
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
@@ -93,17 +89,23 @@ model Verification {
 // Portfolio System Models
 
 model Portfolio {
-  id             String           @id @default(cuid())
-  userId         String           @unique
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  contactInfo    String? //@db.Text  // JSON: {linkedin, github, website, email, phone}
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id              String           @id @default(cuid())
+  userId          String           @unique
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Contact Info fields (previously JSON)
+  name            String?
+  email           String?
+  phone           String?
+  linkedin        String?
+  github          String?
+  website         String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   workExperiences WorkExperience[]
-  educations     Education[]
-  projects       Project[]
-  achievements   Achievement[]
-  skills         PortfolioSkill[]
+  educations      Education[]
+  projects        Project[]
+  achievements    Achievement[]
+  skills          PortfolioSkill[]
 
   @@map("portfolio")
 }
@@ -118,7 +120,7 @@ model WorkExperience {
   startDate    DateTime
   endDate      DateTime?
   isCurrent    Boolean   @default(false)
-  bulletPoints String //@db.Text  // JSON array of strings
+  bulletPoints String[] @default([])
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -134,7 +136,7 @@ model Education {
   degree       String
   fieldOfStudy String
   gpa          String?
-  minors       String? //@db.Text  // JSON array of strings
+  minors       String[]  @default([])
   startDate    DateTime
   endDate      DateTime?
   isCurrent    Boolean   @default(false)
@@ -176,8 +178,8 @@ model Project {
   portfolioId  String
   portfolio    Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
   name         String
-  description  String //@db.Text
-  technologies String //@db.Text  // JSON array of strings
+  description  String    @db.Text
+  technologies String[] @default([])
   url          String?
   startDate    DateTime?
   endDate      DateTime?
@@ -193,9 +195,9 @@ model Achievement {
   portfolioId String
   portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
   title       String
-  description String //@db.Text
+  description String    @db.Text
   date        DateTime?
-  category    String // competition, club, award, etc
+  category    String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -214,15 +216,15 @@ model CommonInstitution {
 }
 
 model Resume {
-  id               String   @id @default(cuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name             String
-  jobDescription   String //@db.Text
-  selectedItemIds  String //@db.Text  // JSON object with arrays of IDs
-  pdfUrl           String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  jobDescription  String   @db.Text
+  selectedItemIds Json     @db.JsonB
+  pdfUrl          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([userId])
   @@map("resume")

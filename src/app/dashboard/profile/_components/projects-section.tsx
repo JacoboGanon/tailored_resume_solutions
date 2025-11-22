@@ -86,12 +86,11 @@ export function ProjectsSection({
 	};
 
 	const handleEdit = (project: portfolio["projects"][number]) => {
-		const techs = JSON.parse(project.technologies);
 		setEditingProject(project);
 		setFormData({
 			name: project.name,
 			description: project.description,
-			technologies: techs,
+			technologies: project.technologies,
 			url: project.url || "",
 			startDate: project.startDate
 				? new Date(project.startDate).toISOString().slice(0, 7)
@@ -342,7 +341,6 @@ export function ProjectsSection({
 				) : (
 					<div className="space-y-4">
 						{portfolio?.projects?.map((project) => {
-							const techs = JSON.parse(project.technologies);
 							return (
 								<div className="rounded-lg border p-4" key={project.id}>
 									<div className="flex items-start justify-between">
@@ -352,7 +350,7 @@ export function ProjectsSection({
 												{project.description}
 											</p>
 											<div className="mt-2 flex flex-wrap gap-1">
-												{techs.map((tech: string) => (
+												{project.technologies.map((tech: string) => (
 													<Badge key={tech} variant="outline">
 														{tech}
 													</Badge>

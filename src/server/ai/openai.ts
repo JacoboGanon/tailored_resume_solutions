@@ -78,7 +78,7 @@ interface Portfolio {
 		startDate: Date;
 		endDate?: Date | null;
 		isCurrent: boolean;
-		bulletPoints: string;
+		bulletPoints: string[];
 	}>;
 	educations: Array<{
 		id: string;
@@ -93,7 +93,7 @@ interface Portfolio {
 		id: string;
 		name: string;
 		description: string;
-		technologies: string;
+		technologies: string[];
 		url?: string | null;
 		startDate?: Date | null;
 		endDate?: Date | null;

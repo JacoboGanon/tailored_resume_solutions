@@ -252,7 +252,6 @@ export default function PersonalizePage() {
 							) : (
 								<div className="space-y-3">
 									{getSelectedWorkExperiences().map((exp) => {
-										const bullets = JSON.parse(exp.bulletPoints);
 										return (
 											<div className="rounded-lg border p-4" key={exp.id}>
 												<div className="flex items-start justify-between">
@@ -280,17 +279,19 @@ export default function PersonalizePage() {
 																	})}
 														</p>
 														<ul className="mt-2 space-y-1 text-sm">
-															{bullets.slice(0, 2).map((bullet: string) => (
-																<li
-																	className="text-muted-foreground"
-																	key={bullet}
-																>
-																	• {bullet}
-																</li>
-															))}
-															{bullets.length > 2 && (
+															{exp.bulletPoints
+																.slice(0, 2)
+																.map((bullet: string) => (
+																	<li
+																		className="text-muted-foreground"
+																		key={bullet}
+																	>
+																		• {bullet}
+																	</li>
+																))}
+															{exp.bulletPoints.length > 2 && (
 																<li className="text-muted-foreground text-xs">
-																	+ {bullets.length - 2} more
+																	+ {exp.bulletPoints.length - 2} more
 																</li>
 															)}
 														</ul>
@@ -373,7 +374,6 @@ export default function PersonalizePage() {
 							<CardContent>
 								<div className="space-y-3">
 									{getSelectedProjects().map((proj) => {
-										const techs = JSON.parse(proj.technologies);
 										return (
 											<div className="rounded-lg border p-3" key={proj.id}>
 												<h4 className="flex items-center gap-2 font-semibold">
@@ -384,7 +384,7 @@ export default function PersonalizePage() {
 													{proj.description}
 												</p>
 												<div className="mt-2 flex flex-wrap gap-1">
-													{techs.map((tech: string) => (
+													{proj.technologies.map((tech: string) => (
 														<Badge
 															className="text-xs"
 															key={tech}

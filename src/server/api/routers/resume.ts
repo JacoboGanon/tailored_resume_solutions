@@ -25,7 +25,7 @@ export const resumeRouter = createTRPCRouter({
 					userId: ctx.session.user.id,
 					name: input.name,
 					jobDescription: input.jobDescription,
-					selectedItemIds: JSON.stringify(input.selectedItemIds),
+					selectedItemIds: input.selectedItemIds,
 				},
 			});
 		}),
@@ -93,7 +93,7 @@ export const resumeRouter = createTRPCRouter({
 				data: {
 					...(input.name && { name: input.name }),
 					...(input.selectedItemIds && {
-						selectedItemIds: JSON.stringify(input.selectedItemIds),
+						selectedItemIds: input.selectedItemIds,
 					}),
 				},
 			});

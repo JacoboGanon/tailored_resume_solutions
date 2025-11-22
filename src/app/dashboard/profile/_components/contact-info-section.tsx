@@ -41,17 +41,19 @@ export function ContactInfoSection({
 		},
 	});
 
-	// Parse contact info when portfolio loads
+	// Load contact info when portfolio loads
 	useEffect(() => {
-		if (portfolio?.contactInfo) {
-			try {
-				const parsed = JSON.parse(portfolio.contactInfo);
-				setContactInfo(parsed);
-			} catch (e) {
-				console.error("Failed to parse contact info", e);
-			}
+		if (portfolio) {
+			setContactInfo({
+				name: portfolio.name ?? "",
+				email: portfolio.email ?? "",
+				phone: portfolio.phone ?? "",
+				linkedin: portfolio.linkedin ?? "",
+				github: portfolio.github ?? "",
+				website: portfolio.website ?? "",
+			});
 		}
-	}, [portfolio?.contactInfo]);
+	}, [portfolio]);
 
 	const handleContactInfoSave = () => {
 		updateContactMutation.mutate(contactInfo);

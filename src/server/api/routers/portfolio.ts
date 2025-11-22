@@ -26,6 +26,7 @@ function parseBulletPoints(text: string): string[] {
 
 // Zod schemas for validation
 const contactInfoSchema = z.object({
+	name: z.string().optional(),
 	email: z.string().email().optional(),
 	phone: z.string().optional(),
 	linkedin: z.string().url().optional().or(z.literal("")),
@@ -124,9 +125,7 @@ export const portfolioRouter = createTRPCRouter({
 
 			return ctx.db.portfolio.update({
 				where: { id: portfolio.id },
-				data: {
-					contactInfo: JSON.stringify(input),
-				},
+				data: input,
 			});
 		}),
 
@@ -146,7 +145,6 @@ export const portfolioRouter = createTRPCRouter({
 				data: {
 					portfolioId: portfolio.id,
 					...input,
-					bulletPoints: JSON.stringify(input.bulletPoints),
 				},
 			});
 		}),
@@ -161,10 +159,7 @@ export const portfolioRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			return ctx.db.workExperience.update({
 				where: { id: input.id },
-				data: {
-					...input.data,
-					bulletPoints: JSON.stringify(input.data.bulletPoints),
-				},
+				data: input.data,
 			});
 		}),
 
@@ -199,7 +194,7 @@ export const portfolioRouter = createTRPCRouter({
 				data: {
 					portfolioId: portfolio.id,
 					...input,
-					minors: input.minors ? JSON.stringify(input.minors) : null,
+					minors: input.minors ?? [],
 				},
 			});
 		}),
@@ -216,7 +211,7 @@ export const portfolioRouter = createTRPCRouter({
 				where: { id: input.id },
 				data: {
 					...input.data,
-					minors: input.data.minors ? JSON.stringify(input.data.minors) : null,
+					minors: input.data.minors ?? [],
 				},
 			});
 		}),
@@ -320,7 +315,6 @@ export const portfolioRouter = createTRPCRouter({
 				data: {
 					portfolioId: portfolio.id,
 					...input,
-					technologies: JSON.stringify(input.technologies),
 				},
 			});
 		}),
@@ -335,10 +329,7 @@ export const portfolioRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			return ctx.db.project.update({
 				where: { id: input.id },
-				data: {
-					...input.data,
-					technologies: JSON.stringify(input.data.technologies),
-				},
+				data: input.data,
 			});
 		}),
 

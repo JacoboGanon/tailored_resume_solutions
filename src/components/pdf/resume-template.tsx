@@ -119,13 +119,12 @@ const styles = StyleSheet.create({
 
 interface ResumeData {
 	contactInfo: {
-		id: string;
 		name: string;
-		email?: string;
-		phone?: string;
-		linkedin?: string;
-		github?: string;
-		website?: string;
+		email?: string | null;
+		phone?: string | null;
+		linkedin?: string | null;
+		github?: string | null;
+		website?: string | null;
 	};
 	workExperiences: Array<{
 		id: string;

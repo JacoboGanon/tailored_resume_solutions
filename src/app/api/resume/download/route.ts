@@ -28,8 +28,14 @@ export async function POST(req: Request) {
 			return new Response("Resume not found", { status: 404 });
 		}
 
-		// Parse selected item IDs
-		const selectedIds = JSON.parse(resume.selectedItemIds);
+		// Get selected item IDs from JSONB field
+		const selectedIds = resume.selectedItemIds as {
+			workExperienceIds?: string[];
+			educationIds?: string[];
+			projectIds?: string[];
+			achievementIds?: string[];
+			skillIds?: string[];
+		};
 
 		// Fetch portfolio with all data
 		const portfolio = await db.portfolio.findUnique({
@@ -74,27 +80,20 @@ export async function POST(req: Request) {
 			return new Response("Portfolio not found", { status: 404 });
 		}
 
-		// Parse contact info
-		const contactInfo = portfolio.contactInfo
-			? JSON.parse(portfolio.contactInfo)
-			: {};
-
 		// Prepare resume data - use profile name if available, fallback to session name
 		const resumeData = {
 			contactInfo: {
-				name: contactInfo.name || session.user.name || "Your Name",
-				...contactInfo,
+				name: portfolio.name || session.user.name || "Your Name",
+				email: portfolio.email,
+				phone: portfolio.phone,
+				linkedin: portfolio.linkedin,
+				github: portfolio.github,
+				website: portfolio.website,
 			},
-			workExperiences: portfolio.workExperiences.map((exp) => ({
-				...exp,
-				bulletPoints: JSON.parse(exp.bulletPoints),
-			})),
+			workExperiences: portfolio.workExperiences,
 			educations: portfolio.educations,
 			skills: portfolio.skills.map((ps) => ps.skill),
-			projects: portfolio.projects.map((proj) => ({
-				...proj,
-				technologies: JSON.parse(proj.technologies),
-			})),
+			projects: portfolio.projects,
 			achievements: portfolio.achievements,
 		};
 

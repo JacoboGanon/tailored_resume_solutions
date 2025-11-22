@@ -100,7 +100,6 @@ export function WorkExperienceSection({
 	};
 
 	const handleEdit = (exp: portfolio["workExperiences"][number]) => {
-		const bullets = JSON.parse(exp.bulletPoints);
 		setEditingExp(exp);
 		setFormData({
 			jobTitle: exp.jobTitle,
@@ -111,7 +110,7 @@ export function WorkExperienceSection({
 				? new Date(exp.endDate).toISOString().slice(0, 7)
 				: "",
 			isCurrent: exp.isCurrent,
-			bulletPoints: bullets,
+			bulletPoints: exp.bulletPoints,
 		});
 		setIsDialogOpen(true);
 	};
@@ -404,7 +403,6 @@ export function WorkExperienceSection({
 				) : (
 					<Accordion className="w-full" collapsible type="single">
 						{portfolio?.workExperiences?.map((exp) => {
-							const bullets = JSON.parse(exp.bulletPoints);
 							return (
 								<AccordionItem key={exp.id} value={exp.id}>
 									<AccordionTrigger>
@@ -435,7 +433,7 @@ export function WorkExperienceSection({
 														})}
 											</p>
 											<ul className="list-inside list-disc space-y-1">
-												{bullets.map((bullet: string) => (
+												{exp.bulletPoints.map((bullet: string) => (
 													<li className="text-sm" key={bullet}>
 														{bullet}
 													</li>

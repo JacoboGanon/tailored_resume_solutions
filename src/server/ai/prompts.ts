@@ -111,7 +111,7 @@ export const formatPortfolioForAI = (portfolio: {
 		startDate: Date;
 		endDate?: Date | null;
 		isCurrent: boolean;
-		bulletPoints: string; // JSON string
+		bulletPoints: string[];
 	}>;
 	educations: Array<{
 		id: string;
@@ -126,7 +126,7 @@ export const formatPortfolioForAI = (portfolio: {
 		id: string;
 		name: string;
 		description: string;
-		technologies: string; // JSON string
+		technologies: string[];
 		url?: string | null;
 		startDate?: Date | null;
 		endDate?: Date | null;
@@ -157,11 +157,10 @@ export const formatPortfolioForAI = (portfolio: {
 
 	let formatted = "# Work Experience\n\n";
 	for (const exp of portfolio.workExperiences) {
-		const bullets = JSON.parse(exp.bulletPoints) as string[];
 		formatted += `## [ID: ${exp.id}] ${exp.jobTitle} at ${exp.company}\n`;
 		formatted += `Location: ${exp.location || "N/A"}\n`;
 		formatted += `Duration: ${formatDate(exp.startDate)} - ${exp.isCurrent ? "Present" : formatDate(exp.endDate)}\n`;
-		formatted += `Achievements:\n${bullets.map((b) => `- ${b}`).join("\n")}\n\n`;
+		formatted += `Achievements:\n${exp.bulletPoints.map((b) => `- ${b}`).join("\n")}\n\n`;
 	}
 
 	formatted += "\n# Education\n\n";
@@ -175,10 +174,9 @@ export const formatPortfolioForAI = (portfolio: {
 
 	formatted += "\n# Projects\n\n";
 	for (const proj of portfolio.projects) {
-		const techs = JSON.parse(proj.technologies) as string[];
 		formatted += `## [ID: ${proj.id}] ${proj.name}\n`;
 		formatted += `Description: ${proj.description}\n`;
-		formatted += `Technologies: ${techs.join(", ")}\n`;
+		formatted += `Technologies: ${proj.technologies.join(", ")}\n`;
 		if (proj.url) formatted += `URL: ${proj.url}\n`;
 		formatted += "\n";
 	}

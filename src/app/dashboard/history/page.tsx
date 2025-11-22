@@ -91,18 +91,20 @@ export default function HistoryPage() {
 	};
 
 	const getSelectedItemsCount = (resume: resume) => {
-		try {
-			const items = JSON.parse(resume.selectedItemIds);
-			return (
-				(items.workExperienceIds?.length || 0) +
-				(items.educationIds?.length || 0) +
-				(items.projectIds?.length || 0) +
-				(items.achievementIds?.length || 0) +
-				(items.skillIds?.length || 0)
-			);
-		} catch {
-			return 0;
-		}
+		const items = resume.selectedItemIds as {
+			workExperienceIds?: string[];
+			educationIds?: string[];
+			projectIds?: string[];
+			achievementIds?: string[];
+			skillIds?: string[];
+		};
+		return (
+			(items.workExperienceIds?.length || 0) +
+			(items.educationIds?.length || 0) +
+			(items.projectIds?.length || 0) +
+			(items.achievementIds?.length || 0) +
+			(items.skillIds?.length || 0)
+		);
 	};
 
 	if (isLoading) {
@@ -225,11 +227,17 @@ export default function HistoryPage() {
 								<h3 className="mb-2 font-semibold">Selected Items</h3>
 								<div className="space-y-2">
 									{(() => {
-										try {
-											const items = JSON.parse(selectedResume.selectedItemIds);
-											return (
-												<div className="grid gap-2">
-													{items.workExperienceIds?.length > 0 && (
+										const items = selectedResume.selectedItemIds as {
+											workExperienceIds?: string[];
+											educationIds?: string[];
+											projectIds?: string[];
+											achievementIds?: string[];
+											skillIds?: string[];
+										};
+										return (
+											<div className="grid gap-2">
+												{items.workExperienceIds &&
+													items.workExperienceIds.length > 0 && (
 														<div className="rounded-lg border p-3">
 															<p className="font-medium text-sm">
 																Work Experiences
@@ -239,7 +247,8 @@ export default function HistoryPage() {
 															</p>
 														</div>
 													)}
-													{items.educationIds?.length > 0 && (
+												{items.educationIds &&
+													items.educationIds.length > 0 && (
 														<div className="rounded-lg border p-3">
 															<p className="font-medium text-sm">Education</p>
 															<p className="text-muted-foreground text-sm">
@@ -247,23 +256,24 @@ export default function HistoryPage() {
 															</p>
 														</div>
 													)}
-													{items.projectIds?.length > 0 && (
-														<div className="rounded-lg border p-3">
-															<p className="font-medium text-sm">Projects</p>
-															<p className="text-muted-foreground text-sm">
-																{items.projectIds.length} selected
-															</p>
-														</div>
-													)}
-													{items.skillIds?.length > 0 && (
-														<div className="rounded-lg border p-3">
-															<p className="font-medium text-sm">Skills</p>
-															<p className="text-muted-foreground text-sm">
-																{items.skillIds.length} selected
-															</p>
-														</div>
-													)}
-													{items.achievementIds?.length > 0 && (
+												{items.projectIds && items.projectIds.length > 0 && (
+													<div className="rounded-lg border p-3">
+														<p className="font-medium text-sm">Projects</p>
+														<p className="text-muted-foreground text-sm">
+															{items.projectIds.length} selected
+														</p>
+													</div>
+												)}
+												{items.skillIds && items.skillIds.length > 0 && (
+													<div className="rounded-lg border p-3">
+														<p className="font-medium text-sm">Skills</p>
+														<p className="text-muted-foreground text-sm">
+															{items.skillIds.length} selected
+														</p>
+													</div>
+												)}
+												{items.achievementIds &&
+													items.achievementIds.length > 0 && (
 														<div className="rounded-lg border p-3">
 															<p className="font-medium text-sm">
 																Achievements
@@ -273,15 +283,8 @@ export default function HistoryPage() {
 															</p>
 														</div>
 													)}
-												</div>
-											);
-										} catch {
-											return (
-												<p className="text-muted-foreground text-sm">
-													Unable to parse selected items
-												</p>
-											);
-										}
+											</div>
+										);
 									})()}
 								</div>
 							</div>
