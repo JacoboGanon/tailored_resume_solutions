@@ -1,4 +1,4 @@
-import { Briefcase, History, LogOut, User } from "lucide-react";
+import { Briefcase, FileSearch, History, LogOut, User } from "lucide-react";
 import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
@@ -35,6 +35,12 @@ const menuItems = [
 		url: "/dashboard/personalize",
 		icon: Briefcase,
 		description: "Match your resume to job descriptions",
+	},
+	{
+		title: "ATS Analyzer",
+		url: "/dashboard/ats-analyzer",
+		icon: FileSearch,
+		description: "Analyze resumes against ATS requirements",
 	},
 	{
 		title: "Resume History",

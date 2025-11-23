@@ -1,9 +1,19 @@
 "use client";
 
 import { experimental_useObject as useObject } from "@ai-sdk/react";
-import { AlertCircle, Check, Download, Save, Sparkles } from "lucide-react";
+import {
+	AlertCircle,
+	Check,
+	Download,
+	Save,
+	Sparkles,
+	Wand2,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { RecommendationsList } from "~/components/ats/recommendations-list";
+import { ResumeDiffViewer } from "~/components/ats/resume-diff-viewer";
+import { ScoreCard } from "~/components/ats/score-card";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -33,24 +43,57 @@ export default function PersonalizePage() {
 		schema: jobMatchSchema,
 	});
 
+	// Get ATS analysis
+	const { data: atsAnalysis, refetch: refetchATSAnalysis } =
+		api.ats.getATSAnalysis.useQuery(
+			{ resumeId: savedResumeId ?? "" },
+			{ enabled: !!savedResumeId },
+		);
+
+	// Get optimized resume
+	const { data: optimizedResume } = api.ats.getModifiedResumes.useQuery(
+		{ resumeId: savedResumeId ?? undefined },
+		{ enabled: !!savedResumeId },
+	);
+
+	// ATS analysis mutation
+	const analyzeATSMutation = api.ats.analyzeResume.useMutation({
+		onSuccess: (_data) => {
+			toast.success("ATS analysis completed");
+			void refetchATSAnalysis();
+		},
+		onError: (error) => {
+			toast.error(`ATS analysis failed: ${error.message}`);
+		},
+	});
+
+	// Optimize resume mutation
+	const optimizeResumeMutation = api.ats.optimizeResume.useMutation({
+		onSuccess: (_data) => {
+			toast.success("Resume optimized successfully");
+		},
+		onError: (error) => {
+			toast.error(`Optimization failed: ${error.message}`);
+		},
+	});
+
+	const saveResumeMutation = api.resume.saveResume.useMutation({
+		onSuccess: (data) => {
+			toast.success("Resume saved to history");
+			setSavedResumeId(data.id);
+			analyzeATSMutation.mutate({ resumeId: data.id });
+		},
+		onError: (error) => {
+			toast.error(error.message);
+		},
+	});
+
 	// Auto-fill resume name when AI generates a title
 	const [hasAutoFilled, setHasAutoFilled] = useState(false);
 	if (object?.resumeTitle && !hasAutoFilled && !resumeName) {
 		setResumeName(object.resumeTitle);
 		setHasAutoFilled(true);
 	}
-
-	const saveResumeMutation = api.resume.saveResume.useMutation({
-		onSuccess: (data) => {
-			toast.success("Resume saved to history");
-			setSavedResumeId(data.id);
-			setResumeName("");
-			setHasAutoFilled(false);
-		},
-		onError: (error) => {
-			toast.error(error.message);
-		},
-	});
 
 	const handleAnalyze = () => {
 		if (!jobDescription.trim()) {
@@ -164,6 +207,112 @@ export default function PersonalizePage() {
 		return portfolio.achievements.filter(
 			(ach) => object.achievementIds?.includes(ach.id) || false,
 		);
+	};
+
+	// Generate resume markdown from selected items
+	const generateResumeMarkdown = () => {
+		if (!portfolio || !object) return "";
+
+		const formatDate = (date: Date | null | undefined, isCurrent = false) => {
+			if (isCurrent) return "Present";
+			if (!date) return "";
+			const d = new Date(date);
+			return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+		};
+
+		let markdown = "";
+
+		// Header
+		if (portfolio.name) {
+			markdown += `# ${portfolio.name}\n\n`;
+		}
+
+		// Contact Info
+		const contactParts: string[] = [];
+		if (portfolio.email) contactParts.push(portfolio.email);
+		if (portfolio.phone) contactParts.push(portfolio.phone);
+		if (portfolio.linkedin)
+			contactParts.push(`LinkedIn: ${portfolio.linkedin}`);
+		if (portfolio.github) contactParts.push(`GitHub: ${portfolio.github}`);
+		if (portfolio.website) contactParts.push(`Website: ${portfolio.website}`);
+		if (contactParts.length > 0) {
+			markdown += `${contactParts.join(" | ")}\n\n`;
+		}
+
+		// Work Experience
+		const selectedExps = getSelectedWorkExperiences();
+		if (selectedExps.length > 0) {
+			markdown += "## Work Experience\n\n";
+			for (const exp of selectedExps) {
+				markdown += `### ${exp.jobTitle} at ${exp.company}\n`;
+				markdown += `${exp.location || ""} | ${formatDate(exp.startDate)} - ${formatDate(exp.endDate, exp.isCurrent)}\n\n`;
+				for (const bullet of exp.bulletPoints) {
+					markdown += `- ${bullet}\n`;
+				}
+				markdown += "\n";
+			}
+		}
+
+		// Education
+		const selectedEdu = getSelectedEducations();
+		if (selectedEdu.length > 0) {
+			markdown += "## Education\n\n";
+			for (const edu of selectedEdu) {
+				markdown += `### ${edu.degree} in ${edu.fieldOfStudy}\n`;
+				markdown += `${edu.institution} | ${formatDate(edu.startDate)} - ${formatDate(edu.endDate)}\n`;
+				if (edu.gpa) markdown += `GPA: ${edu.gpa}\n`;
+				markdown += "\n";
+			}
+		}
+
+		// Skills
+		const selectedSkills = getSelectedSkills();
+		if (selectedSkills.length > 0) {
+			markdown += "## Skills\n\n";
+			const skillsByCategory = selectedSkills.reduce(
+				(acc, s) => {
+					const category = s.skill.category || "Other";
+					if (!acc[category]) acc[category] = [];
+					acc[category].push(s.skill.name);
+					return acc;
+				},
+				{} as Record<string, string[]>,
+			);
+			for (const [category, skills] of Object.entries(skillsByCategory)) {
+				markdown += `**${category}**: ${skills.join(", ")}\n\n`;
+			}
+		}
+
+		// Projects
+		const selectedProjs = getSelectedProjects();
+		if (selectedProjs.length > 0) {
+			markdown += "## Projects\n\n";
+			for (const proj of selectedProjs) {
+				markdown += `### ${proj.name}\n`;
+				if (proj.description) markdown += `${proj.description}\n\n`;
+				if (proj.technologies.length > 0) {
+					markdown += `**Technologies**: ${proj.technologies.join(", ")}\n\n`;
+				}
+				if (proj.url) markdown += `**Link**: ${proj.url}\n\n`;
+				for (const bullet of proj.bulletPoints) {
+					markdown += `- ${bullet}\n`;
+				}
+				markdown += "\n";
+			}
+		}
+
+		// Achievements
+		const selectedAchs = getSelectedAchievements();
+		if (selectedAchs.length > 0) {
+			markdown += "## Achievements\n\n";
+			for (const ach of selectedAchs) {
+				markdown += `### ${ach.title} (${ach.category})\n`;
+				if (ach.date) markdown += `${formatDate(ach.date)}\n\n`;
+				markdown += `${ach.description}\n\n`;
+			}
+		}
+
+		return markdown;
 	};
 
 	return (
@@ -452,7 +601,7 @@ export default function PersonalizePage() {
 									<Label htmlFor="resume-name">
 										Resume Name{" "}
 										{object.resumeTitle && (
-											<span className="text-muted-foreground text-xs font-normal">
+											<span className="font-normal text-muted-foreground text-xs">
 												(AI-generated, editable)
 											</span>
 										)}
@@ -495,6 +644,98 @@ export default function PersonalizePage() {
 								</div>
 							</CardContent>
 						</Card>
+					)}
+
+					{/* ATS Analysis Section */}
+					{savedResumeId && (
+						<>
+							{analyzeATSMutation.isPending && (
+								<Card>
+									<CardHeader>
+										<CardTitle>ATS Analysis</CardTitle>
+										<CardDescription>
+											Analyzing your resume against ATS requirements...
+										</CardDescription>
+									</CardHeader>
+									<CardContent>
+										<div className="space-y-2">
+											<Skeleton className="h-32 w-full" />
+										</div>
+									</CardContent>
+								</Card>
+							)}
+
+							{atsAnalysis && !analyzeATSMutation.isPending && (
+								<>
+									<ScoreCard
+										cosineSimilarity={atsAnalysis.cosineSimilarity}
+										experienceRelevance={atsAnalysis.experienceRelevance}
+										keywordMatchPercent={atsAnalysis.keywordMatchPercent}
+										overallScore={atsAnalysis.overallScore}
+										skillOverlapPercent={atsAnalysis.skillOverlapPercent}
+									/>
+
+									<RecommendationsList
+										missingSkills={atsAnalysis.missingSkills}
+										priorityKeywords={atsAnalysis.priorityKeywords}
+										recommendations={
+											(atsAnalysis.recommendations as Array<{
+												category: string;
+												suggestion: string;
+												priority: "high" | "medium" | "low";
+											}>) || []
+										}
+									/>
+
+									<Card>
+										<CardHeader>
+											<CardTitle>Optimize Resume</CardTitle>
+											<CardDescription>
+												Use AI to automatically improve your resume based on ATS
+												recommendations
+											</CardDescription>
+										</CardHeader>
+										<CardContent>
+											<Button
+												className="w-full"
+												disabled={optimizeResumeMutation.isPending}
+												onClick={() => {
+													optimizeResumeMutation.mutate({
+														resumeId: savedResumeId,
+														analysisId: atsAnalysis.id,
+													});
+												}}
+											>
+												<Wand2 className="mr-2 h-4 w-4" />
+												{optimizeResumeMutation.isPending
+													? "Optimizing..."
+													: "Optimize Resume for Me"}
+											</Button>
+										</CardContent>
+									</Card>
+								</>
+							)}
+
+							{optimizedResume && optimizedResume.length > 0 && (
+								<ResumeDiffViewer
+									modifications={
+										(optimizedResume[0]?.modifications as Array<{
+											section: string;
+											change: string;
+											reason: string;
+										}>) || []
+									}
+									optimizedResume={
+										(
+											optimizedResume[0]?.modifiedContent as {
+												markdown: string;
+											}
+										)?.markdown || ""
+									}
+									originalResume={generateResumeMarkdown()}
+								/>
+							)}
+						</>
 					)}
 				</>
 			)}

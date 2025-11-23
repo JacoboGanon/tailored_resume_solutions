@@ -61,7 +61,11 @@ export function SkillsSection({ portfolio, allSkills }: SkillsSectionProps) {
 				) : (
 					<div className="flex flex-wrap gap-2">
 						{portfolio?.skills?.map((ps) => (
-							<Badge className="gap-2 capitalize" key={ps.id} variant="secondary">
+							<Badge
+								className="gap-2 capitalize"
+								key={ps.id}
+								variant="secondary"
+							>
 								{ps.skill.name}
 								<button
 									className="ml-1 hover:text-destructive"

@@ -216,3 +216,227 @@ export const formatPortfolioForAI = (portfolio: {
 
 	return formatted;
 };
+
+// ATS Extraction Prompts
+
+export const JOB_EXTRACTION_PROMPT = (
+	postingInformation: string,
+) => `You are a JSON-extraction engine. Convert the following raw job posting text into exactly the JSON schema below:
+
+— Do not add any extra fields or prose.
+
+— Use "YYYY-MM-DD" for all dates.
+
+— Ensure any URLs (website, applyLink) conform to URI format.
+
+— Do not change the structure or key names; output only valid JSON matching the schema.
+
+Do not format the response in Markdown or any other format. Just output raw JSON.
+
+Schema:
+
+{
+  "jobId": "string",
+  "jobTitle": "string",
+  "companyProfile": {
+    "companyName": "string",
+    "industry": "Optional[string]",
+    "website": "Optional[string]",
+    "description": "Optional[string]"
+  },
+  "location": {
+    "city": "string",
+    "state": "string",
+    "country": "string",
+    "remoteStatus": "Not Specified"
+  },
+  "datePosted": "YYYY-MM-DD",
+  "employmentType": "Full-time | Full time | Part-time | Part time | Contract | Internship | Temporary | Not Specified",
+  "jobSummary": "string",
+  "keyResponsibilities": [
+    "string",
+    "..."
+  ],
+  "qualifications": {
+    "required": [
+      "string",
+      "..."
+    ],
+    "preferred": [
+      "string",
+      "..."
+    ]
+  },
+  "compensationAndBenefits": {
+    "salaryRange": "string",
+    "benefits": [
+      "string",
+      "..."
+    ]
+  },
+  "applicationInfo": {
+    "howToApply": "string",
+    "applyLink": "string",
+    "contactEmail": "Optional[string]"
+  },
+  "extractedKeywords": [
+    "string",
+    "..."
+  ]
+}
+
+Job Posting:
+
+${postingInformation}`;
+
+export const RESUME_EXTRACTION_PROMPT = (
+	userResume: string,
+) => `You are a JSON extraction engine. Convert the following resume text into precisely the JSON schema specified below.
+
+Map each resume section to the schema without inventing information.
+
+If a field is missing in the source text, use an empty string or empty list as appropriate.
+
+Preserve bullet points in the description arrays using short factual sentences.
+
+Use "Present" if an end date is ongoing and prefer YYYY-MM-DD where dates are available.
+
+Keep the additional section organised: list technical skills, languages, certifications/training, and awards exactly as they appear.
+
+Do not compose any extra fields or commentary and output raw JSON only (no Markdown, no prose).
+
+Schema:
+
+{
+  "UUID": "string",
+  "Personal Data": {
+    "firstName": "string",
+    "lastName": "string",
+    "email": "string",
+    "phone": "string",
+    "linkedin": "string",
+    "portfolio": "string",
+    "location": {
+      "city": "string",
+      "country": "string"
+    }
+  },
+  "Experiences": [
+    {
+      "jobTitle": "string",
+      "company": "string",
+      "location": "string",
+      "startDate": "YYYY-MM-DD",
+      "endDate": "YYYY-MM-DD or Present",
+      "description": [
+        "string",
+        "..."
+      ],
+      "technologiesUsed": [
+        "string",
+        "..."
+      ]
+    }
+  ],
+  "Projects": [
+    {
+      "projectName": "string",
+      "description": "string",
+      "technologiesUsed": [
+        "string",
+        "..."
+      ],
+      "link": "string",
+      "startDate": "YYYY-MM-DD",
+      "endDate": "YYYY-MM-DD"
+    }
+  ],
+  "Skills": [
+    {
+      "category": "string",
+      "skillName": "string"
+    }
+  ],
+  "Research Work": [
+    {
+      "title": "string | null",
+      "publication": "string | null",
+      "date": "YYYY-MM-DD | null",
+      "link": "string | null",
+      "description": "string | null"
+    }
+  ],
+  "Achievements": [
+    "string",
+    "..."
+  ],
+  "Education": [
+    {
+      "institution": "string",
+      "degree": "string",
+      "fieldOfStudy": "string | null",
+      "startDate": "YYYY-MM-DD",
+      "endDate": "YYYY-MM-DD",
+      "grade": "string",
+      "description": "string"
+    }
+  ],
+  "Extracted Keywords": [
+    "string",
+    "..."
+  ]
+}
+
+Resume:
+
+${userResume}`;
+
+export const ATS_RESUME_IMPROVEMENT_PROMPT = (
+	atsRecommendations: string,
+	skillPriorityText: string,
+	currentCosineSimilarity: number,
+	rawJobDescription: string,
+	extractedJobKeywords: string,
+	rawResume: string,
+	extractedResumeKeywords: string,
+) => `You are an expert resume editor and talent acquisition specialist. Your task is to revise the following resume so that it aligns as closely as possible with the provided job description and extracted job keywords, in order to maximize the cosine similarity between the resume and the job keywords.
+
+Instructions:
+- Carefully review the job description and the list of extracted job keywords.
+- Use the ATS guidance below to address structural or keyword gaps before rewriting bullets:
+  - ATS Recommendations:
+${atsRecommendations}
+  - Priority keywords ranked by job emphasis:
+${skillPriorityText}
+- Update the candidate's resume by rephrasing and reordering existing content so it highlights the most relevant evidence:
+  - Emphasize and naturally weave job-aligned keywords by rewriting existing bullets, sentences, and headings. You may combine or split bullets, reorder content, and surface tools/methods that are already mentioned or clearly implied.
+  - Do NOT invent new jobs, projects, technologies, certifications, or accomplishments that are not present in the original resume text. You may enrich a bullet only when all underlying facts come from the original resume (e.g., clarify that a described study is a "digital health pilot" when the resume already indicates digital health work).
+  - Preserve the core section structure: Education, Work Experience, Personal Projects, Additional (Technical Skills, Languages, Certifications & Training, Awards). You may add a concise "Summary" or "Professional Summary" section at the top if it is missing, but do not introduce unrelated sections.
+  - Keep each Additional subsection limited to items explicitly present in the original resume. If a subsection has no content, leave it empty.
+  - When a requirement is missing, do not fabricate experience. Instead, highlight adjacent or transferable elements already in the resume and frame them with the job's terminology.
+  - Maintain a natural, professional tone and avoid keyword stuffing.
+  - Where possible, use quantifiable achievements already present in the resume and action verbs to make impact clear.
+  - The current cosine similarity score is ${currentCosineSimilarity.toFixed(4)}. Revise the resume using the above constraints to increase this score.
+- ONLY output the improved updated resume. Do not include any explanations, commentary, or formatting outside of the resume itself.
+
+Job Description:
+\`\`\`md
+${rawJobDescription}
+\`\`\`
+
+Extracted Job Keywords:
+\`\`\`md
+${extractedJobKeywords}
+\`\`\`
+
+Original Resume:
+\`\`\`md
+${rawResume}
+\`\`\`
+
+Extracted Resume Keywords:
+\`\`\`md
+${extractedResumeKeywords}
+\`\`\`
+
+NOTE: ONLY OUTPUT THE IMPROVED UPDATED RESUME IN MARKDOWN FORMAT.`;

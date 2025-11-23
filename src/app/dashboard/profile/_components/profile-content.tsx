@@ -1,9 +1,9 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { api } from "~/trpc/react";
 import type { CachedInstitution } from "~/server/cache/institutions";
 import type { CachedSkill } from "~/server/cache/skills";
+import { api } from "~/trpc/react";
 import { AchievementsSection } from "./achievements-section";
 import { ContactInfoSection } from "./contact-info-section";
 import { EducationSection } from "./education-section";

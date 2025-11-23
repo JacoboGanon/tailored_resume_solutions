@@ -40,13 +40,13 @@ export function SkillCombobox({
 		if (search.length < 2) return [];
 		const searchLower = search.toLowerCase();
 		return allSkills.filter((skill) =>
-			skill.name.toLowerCase().includes(searchLower)
+			skill.name.toLowerCase().includes(searchLower),
 		);
 	}, [allSkills, search]);
 
 	const handleSelect = (skillName: string) => {
 		const skill = allSkills.find(
-			(s) => s.name.toLowerCase() === skillName.toLowerCase()
+			(s) => s.name.toLowerCase() === skillName.toLowerCase(),
 		);
 		onSkillSelect(skillName, skill?.id);
 		setSearch("");

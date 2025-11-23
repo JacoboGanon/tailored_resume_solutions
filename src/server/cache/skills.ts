@@ -9,7 +9,7 @@ export const getAllSkills = unstable_cache(
 		});
 	},
 	["all-skills"],
-	{ revalidate: 3600, tags: ["skills"] }
+	{ revalidate: 3600, tags: ["skills"] },
 );
 
 export type CachedSkill = Awaited<ReturnType<typeof getAllSkills>>[number];

@@ -217,16 +217,61 @@ model CommonInstitution {
 }
 
 model Resume {
-  id              String   @id @default(cuid())
+  id              String          @id @default(cuid())
   userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   name            String
-  jobDescription  String   @db.Text
-  selectedItemIds Json     @db.JsonB
+  jobDescription  String          @db.Text
+  selectedItemIds Json            @db.JsonB
   pdfUrl          String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  atsAnalyses     ATSAnalysis[]
+  modifiedVersions ModifiedResume[]
 
   @@index([userId])
   @@map("resume")
+}
+
+model ATSAnalysis {
+  id                  String   @id @default(cuid())
+  resumeId            String
+  resume              Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  
+  // Extracted structured data
+  extractedJob        Json     @db.JsonB  // Job posting in JSON format
+  extractedResume     Json     @db.JsonB  // Resume in JSON format
+  
+  // Scoring metrics
+  overallScore        Float    // 0-100 composite score
+  cosineSimilarity    Float    // Keyword vector similarity
+  keywordMatchPercent Float    // % of job keywords in resume
+  skillOverlapPercent Float    // % of required skills matched
+  experienceRelevance Float    // Relevance of work experience
+  
+  // ATS recommendations
+  recommendations     Json     @db.JsonB  // Array of improvement suggestions
+  priorityKeywords    String[] // Keywords to emphasize
+  missingSkills       String[] // Skills to add
+  
+  createdAt           DateTime @default(now())
+  
+  @@index([resumeId])
+  @@map("ats_analysis")
+}
+
+model ModifiedResume {
+  id                 String   @id @default(cuid())
+  originalResumeId   String
+  originalResume      Resume   @relation(fields: [originalResumeId], references: [id], onDelete: Cascade)
+  
+  name               String
+  modifiedContent    Json     @db.JsonB  // AI-modified resume data
+  modifications      Json     @db.JsonB  // Log of changes made
+  atsScore           Float?   // ATS score after modifications
+  
+  createdAt          DateTime @default(now())
+  
+  @@index([originalResumeId])
+  @@map("modified_resume")
 }

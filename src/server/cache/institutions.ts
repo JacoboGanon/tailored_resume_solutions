@@ -9,7 +9,7 @@ export const getAllInstitutions = unstable_cache(
 		});
 	},
 	["all-institutions"],
-	{ revalidate: 3600, tags: ["institutions"] }
+	{ revalidate: 3600, tags: ["institutions"] },
 );
 
 export type CachedInstitution = Awaited<

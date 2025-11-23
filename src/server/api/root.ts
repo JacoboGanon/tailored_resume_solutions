@@ -1,3 +1,4 @@
+import { atsRouter } from "~/server/api/routers/ats";
 import { portfolioRouter } from "~/server/api/routers/portfolio";
 import { postRouter } from "~/server/api/routers/post";
 import { resumeRouter } from "~/server/api/routers/resume";
@@ -12,6 +13,7 @@ export const appRouter = createTRPCRouter({
 	post: postRouter,
 	portfolio: portfolioRouter,
 	resume: resumeRouter,
+	ats: atsRouter,
 });
 
 // export type definition of API

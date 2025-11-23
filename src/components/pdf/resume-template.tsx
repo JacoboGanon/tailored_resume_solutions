@@ -7,57 +7,57 @@ import {
 	View,
 } from "@react-pdf/renderer";
 
-// Define styles for the PDF - Simple, ATS-friendly formatting
+// Define styles for the PDF - Simple, ATS-friendly formatting with proper spacing
 const styles = StyleSheet.create({
 	page: {
-		padding: 30,
+		padding: 40,
 		fontSize: 10,
 		fontFamily: "Helvetica",
-		lineHeight: 1.0,
+		lineHeight: 1.4,
 	},
 	name: {
-		fontSize: 20,
+		fontSize: 22,
 		fontFamily: "Helvetica-Bold",
-		marginBottom: 12,
+		marginBottom: 8,
 		textAlign: "center",
 	},
 	contactInfo: {
-		fontSize: 11,
+		fontSize: 10,
 		textAlign: "center",
-		marginBottom: 5,
+		marginBottom: 16,
 	},
 	sectionTitle: {
-		fontSize: 11,
+		fontSize: 12,
 		fontFamily: "Helvetica-Bold",
-		marginTop: 5,
-		marginBottom: 3,
+		marginTop: 14,
+		marginBottom: 8,
 		borderBottomWidth: 1,
 		borderBottomColor: "#000",
-		paddingBottom: 1,
+		paddingBottom: 2,
 	},
 	row: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		marginBottom: 1,
+		marginBottom: 2,
 	},
 	textBold: {
-		fontSize: 11,
+		fontSize: 10,
 		fontFamily: "Helvetica-Bold",
 	},
 	text: {
-		fontSize: 11,
+		fontSize: 10,
 	},
 	textItalic: {
-		fontSize: 11,
+		fontSize: 10,
 		fontFamily: "Helvetica-Oblique",
 	},
 	textSmall: {
-		fontSize: 11,
+		fontSize: 10,
 	},
 	bullet: {
-		fontSize: 11,
+		fontSize: 10,
 		marginLeft: 15,
-		marginBottom: 1,
+		marginBottom: 3,
 	},
 	link: {
 		fontFamily: "Helvetica-Bold",
@@ -186,7 +186,7 @@ export const ResumeDocument = ({ data }: { data: ResumeData }) => {
 					<View>
 						<Text style={styles.sectionTitle}>EXPERIENCE</Text>
 						{data.workExperiences.map((exp) => (
-							<View key={exp.id} style={{ marginBottom: 4 }}>
+							<View key={exp.id} style={{ marginBottom: 10 }}>
 								<View style={styles.row}>
 									<Text style={styles.textBold}>{exp.jobTitle}</Text>
 									<Text style={styles.textSmall}>
@@ -213,7 +213,7 @@ export const ResumeDocument = ({ data }: { data: ResumeData }) => {
 					<View>
 						<Text style={styles.sectionTitle}>EDUCATION</Text>
 						{data.educations.map((edu) => (
-							<View key={edu.id} style={{ marginBottom: 3 }}>
+							<View key={edu.id} style={{ marginBottom: 8 }}>
 								<View style={styles.row}>
 									<Text style={styles.textBold}>
 										{edu.degree} in {edu.fieldOfStudy}
@@ -252,7 +252,7 @@ export const ResumeDocument = ({ data }: { data: ResumeData }) => {
 					<View>
 						<Text style={styles.sectionTitle}>PROJECTS</Text>
 						{data.projects.map((project) => (
-							<View key={project.id} style={{ marginBottom: 4 }}>
+							<View key={project.id} style={{ marginBottom: 10 }}>
 								<View style={styles.row}>
 									<Text style={styles.textBold}>{project.name}</Text>
 									{project.url && (
@@ -283,7 +283,7 @@ export const ResumeDocument = ({ data }: { data: ResumeData }) => {
 					<View>
 						<Text style={styles.sectionTitle}>ACHIEVEMENTS</Text>
 						{data.achievements.map((achievement) => (
-							<View key={achievement.id} style={{ marginBottom: 3 }}>
+							<View key={achievement.id} style={{ marginBottom: 8 }}>
 								<View style={styles.row}>
 									<Text style={styles.textBold}>
 										{achievement.title} ({achievement.category})

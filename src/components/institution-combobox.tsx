@@ -42,15 +42,13 @@ export function InstitutionCombobox({
 		if (search.length < 2) return [];
 		const searchLower = search.toLowerCase();
 		return allInstitutions.filter((institution) =>
-			institution.name.toLowerCase().includes(searchLower)
+			institution.name.toLowerCase().includes(searchLower),
 		);
 	}, [allInstitutions, search]);
 
 	const showUseCustomOption =
 		search.trim().length >= 2 &&
-		!allInstitutions.find(
-			(i) => i.name.toLowerCase() === search.toLowerCase()
-		);
+		!allInstitutions.find((i) => i.name.toLowerCase() === search.toLowerCase());
 
 	return (
 		<Popover onOpenChange={setOpen} open={open}>
@@ -99,7 +97,9 @@ export function InstitutionCombobox({
 										<Check
 											className={cn(
 												"mr-2 h-4 w-4",
-												value === institution.name ? "opacity-100" : "opacity-0"
+												value === institution.name
+													? "opacity-100"
+													: "opacity-0",
 											)}
 										/>
 										<span className="capitalize">{institution.name}</span>
