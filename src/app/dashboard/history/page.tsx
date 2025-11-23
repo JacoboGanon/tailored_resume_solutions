@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { Download, Eye, FileText, Trash2 } from "lucide-react";
+import { ChevronDown, Download, Eye, FileText, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
@@ -20,6 +20,12 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "~/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import {
 	Table,
 	TableBody,
@@ -54,38 +60,52 @@ export default function HistoryPage() {
 		setIsViewDialogOpen(true);
 	};
 
-	const handleDelete = (id: string) => {
+	const handleDelete = (id: string, isOptimized?: boolean) => {
 		if (confirm("Are you sure you want to delete this resume?")) {
-			deleteMutation.mutate({ id });
+			deleteMutation.mutate({ id, isOptimized });
 		}
 	};
 
-	const handleDownload = async (resumeId: string, resumeName: string) => {
+	const handleDownload = async (
+		resumeId: string,
+		resumeName: string,
+		format: "pdf" | "docx" = "pdf",
+		isOptimized?: boolean,
+		modifiedResumeId?: string,
+	) => {
 		try {
-			const response = await fetch("/api/resume/download", {
+			const endpoint = isOptimized
+				? "/api/resume/download-modified"
+				: "/api/resume/download";
+			const body = isOptimized
+				? { modifiedResumeId: modifiedResumeId ?? resumeId, format }
+				: { resumeId, format };
+
+			const response = await fetch(endpoint, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify({ resumeId }),
+				body: JSON.stringify(body),
 			});
 
 			if (!response.ok) {
-				throw new Error("Failed to download PDF");
+				throw new Error(`Failed to download ${format.toUpperCase()}`);
 			}
 
 			const blob = await response.blob();
 			const url = window.URL.createObjectURL(blob);
 			const a = document.createElement("a");
 			a.href = url;
-			a.download = `${resumeName.replace(/[^a-z0-9]/gi, "_")}.pdf`;
+			const extension = format === "docx" ? "docx" : "pdf";
+			a.download = `${resumeName.replace(/[^a-z0-9]/gi, "_")}.${extension}`;
 			document.body.appendChild(a);
 			a.click();
 			window.URL.revokeObjectURL(url);
 			document.body.removeChild(a);
-			toast.success("Resume downloaded");
+			toast.success(`Resume downloaded as ${format.toUpperCase()}`);
 		} catch (error) {
-			toast.error("Failed to download resume");
+			toast.error(`Failed to download resume as ${format.toUpperCase()}`);
 			console.error(error);
 		}
 	};
@@ -153,7 +173,15 @@ export default function HistoryPage() {
 									{resumes.map((resume) => (
 										<TableRow key={resume.id}>
 											<TableCell className="font-medium">
-												{resume.name}
+												<div className="flex items-center gap-2">
+													{resume.name}
+													{(resume as { isOptimized?: boolean })
+														.isOptimized && (
+														<Badge className="text-xs" variant="default">
+															Optimized
+														</Badge>
+													)}
+												</div>
 											</TableCell>
 											<TableCell className="max-w-md">
 												<p className="truncate text-muted-foreground text-sm">
@@ -177,17 +205,86 @@ export default function HistoryPage() {
 													>
 														<Eye className="h-4 w-4" />
 													</Button>
+													<DropdownMenu>
+														<div className="flex">
+															<Button
+																onClick={() =>
+																	handleDownload(
+																		resume.id,
+																		resume.name,
+																		"pdf",
+																		(resume as { isOptimized?: boolean })
+																			.isOptimized,
+																		(
+																			resume as {
+																				modifiedResumeId?: string;
+																			}
+																		).modifiedResumeId,
+																	)
+																}
+																size="sm"
+																variant="ghost"
+																className="rounded-r-none"
+															>
+																<Download className="h-4 w-4" />
+															</Button>
+															<DropdownMenuTrigger asChild>
+																<Button
+																	size="sm"
+																	variant="ghost"
+																	className="rounded-l-none border-l px-1"
+																>
+																	<ChevronDown className="h-4 w-4" />
+																</Button>
+															</DropdownMenuTrigger>
+														</div>
+														<DropdownMenuContent align="end">
+															<DropdownMenuItem
+																onClick={() =>
+																	handleDownload(
+																		resume.id,
+																		resume.name,
+																		"pdf",
+																		(resume as { isOptimized?: boolean })
+																			.isOptimized,
+																		(
+																			resume as {
+																				modifiedResumeId?: string;
+																			}
+																		).modifiedResumeId,
+																	)
+																}
+															>
+																Download as PDF
+															</DropdownMenuItem>
+															<DropdownMenuItem
+																onClick={() =>
+																	handleDownload(
+																		resume.id,
+																		resume.name,
+																		"docx",
+																		(resume as { isOptimized?: boolean })
+																			.isOptimized,
+																		(
+																			resume as {
+																				modifiedResumeId?: string;
+																			}
+																		).modifiedResumeId,
+																	)
+																}
+															>
+																Download as DOCX
+															</DropdownMenuItem>
+														</DropdownMenuContent>
+													</DropdownMenu>
 													<Button
 														onClick={() =>
-															handleDownload(resume.id, resume.name)
+															handleDelete(
+																resume.id,
+																(resume as { isOptimized?: boolean })
+																	.isOptimized,
+															)
 														}
-														size="sm"
-														variant="ghost"
-													>
-														<Download className="h-4 w-4" />
-													</Button>
-													<Button
-														onClick={() => handleDelete(resume.id)}
 														size="sm"
 														variant="ghost"
 													>

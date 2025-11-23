@@ -8,8 +8,160 @@ import {
 import { optimizeResumeForATS } from "~/server/ai/ats-optimizer";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
+/**
+ * Convert structured modified resume to markdown for display
+ */
+function modifiedResumeToMarkdown(modifiedResume: {
+	contactName: string | null;
+	email: string | null;
+	phone: string | null;
+	linkedin: string | null;
+	github: string | null;
+	website: string | null;
+	professionalSummary: string | null;
+	workExperiences: Array<{
+		jobTitle: string;
+		company: string;
+		location: string | null;
+		startDate: Date;
+		endDate: Date | null;
+		isCurrent: boolean;
+		bulletPoints: string[];
+	}>;
+	educations: Array<{
+		institution: string;
+		degree: string;
+		fieldOfStudy: string;
+		gpa: string | null;
+		startDate: Date;
+		endDate: Date | null;
+		isCurrent: boolean;
+	}>;
+	skills: Array<{
+		name: string;
+		category: string | null;
+	}>;
+	projects: Array<{
+		name: string;
+		description: string | null;
+		bulletPoints: string[];
+		technologies: string[];
+		url: string | null;
+	}>;
+	achievements: Array<{
+		title: string;
+		description: string;
+		category: string;
+		date: Date | null;
+	}>;
+}): string {
+	const formatDate = (date: Date | null | undefined, isCurrent = false) => {
+		if (isCurrent) return "Present";
+		if (!date) return "";
+		const d = new Date(date);
+		return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+	};
+
+	let markdown = "";
+
+	// Header
+	if (modifiedResume.contactName) {
+		markdown += `# ${modifiedResume.contactName}\n\n`;
+	}
+
+	// Contact Info
+	const contactParts: string[] = [];
+	if (modifiedResume.email) contactParts.push(modifiedResume.email);
+	if (modifiedResume.phone) contactParts.push(modifiedResume.phone);
+	if (modifiedResume.linkedin)
+		contactParts.push(`LinkedIn: ${modifiedResume.linkedin}`);
+	if (modifiedResume.github)
+		contactParts.push(`GitHub: ${modifiedResume.github}`);
+	if (modifiedResume.website)
+		contactParts.push(`Website: ${modifiedResume.website}`);
+	if (contactParts.length > 0) {
+		markdown += `${contactParts.join(" | ")}\n\n`;
+	}
+
+	// Professional Summary
+	if (modifiedResume.professionalSummary) {
+		markdown += `## Professional Summary\n\n${modifiedResume.professionalSummary}\n\n`;
+	}
+
+	// Work Experience
+	if (modifiedResume.workExperiences.length > 0) {
+		markdown += "## Work Experience\n\n";
+		for (const exp of modifiedResume.workExperiences) {
+			markdown += `### ${exp.jobTitle} at ${exp.company}\n`;
+			markdown += `${exp.location || ""} | ${formatDate(exp.startDate)} - ${formatDate(exp.endDate, exp.isCurrent)}\n\n`;
+			for (const bullet of exp.bulletPoints) {
+				markdown += `- ${bullet}\n`;
+			}
+			markdown += "\n";
+		}
+	}
+
+	// Education
+	if (modifiedResume.educations.length > 0) {
+		markdown += "## Education\n\n";
+		for (const edu of modifiedResume.educations) {
+			markdown += `### ${edu.degree} in ${edu.fieldOfStudy}\n`;
+			markdown += `${edu.institution} | ${formatDate(edu.startDate)} - ${formatDate(edu.endDate, edu.isCurrent)}\n`;
+			if (edu.gpa) markdown += `GPA: ${edu.gpa}\n`;
+			markdown += "\n";
+		}
+	}
+
+	// Skills
+	if (modifiedResume.skills.length > 0) {
+		markdown += "## Skills\n\n";
+		const skillsByCategory = modifiedResume.skills.reduce(
+			(acc, s) => {
+				const category = s.category || "Other";
+				if (!acc[category]) acc[category] = [];
+				acc[category].push(s.name);
+				return acc;
+			},
+			{} as Record<string, string[]>,
+		);
+		for (const [category, skills] of Object.entries(skillsByCategory)) {
+			markdown += `**${category}**: ${skills.join(", ")}\n\n`;
+		}
+	}
+
+	// Projects
+	if (modifiedResume.projects.length > 0) {
+		markdown += "## Projects\n\n";
+		for (const proj of modifiedResume.projects) {
+			markdown += `### ${proj.name}\n`;
+			if (proj.description) markdown += `${proj.description}\n\n`;
+			if (proj.technologies.length > 0) {
+				markdown += `**Technologies**: ${proj.technologies.join(", ")}\n\n`;
+			}
+			if (proj.url) markdown += `**Link**: ${proj.url}\n\n`;
+			for (const bullet of proj.bulletPoints) {
+				markdown += `- ${bullet}\n`;
+			}
+			markdown += "\n";
+		}
+	}
+
+	// Achievements
+	if (modifiedResume.achievements.length > 0) {
+		markdown += "## Achievements\n\n";
+		for (const ach of modifiedResume.achievements) {
+			markdown += `### ${ach.title} (${ach.category})\n`;
+			if (ach.date) markdown += `${formatDate(ach.date)}\n\n`;
+			markdown += `${ach.description}\n\n`;
+		}
+	}
+
+	return markdown;
+}
+
 export const atsRouter = createTRPCRouter({
 	// Analyze resume against job description
+	// @deprecated Use /api/ats/analyze streaming endpoint instead
 	analyzeResume: protectedProcedure
 		.input(
 			z.object({
@@ -66,20 +218,14 @@ export const atsRouter = createTRPCRouter({
 			const analysis = await ctx.db.aTSAnalysis.create({
 				data: {
 					resumeId: resume.id,
-					extractedJob: extractedJob as unknown as Record<string, unknown>,
-					extractedResume: extractedResume as unknown as Record<
-						string,
-						unknown
-					>,
+					extractedJob: JSON.parse(JSON.stringify(extractedJob)),
+					extractedResume: JSON.parse(JSON.stringify(extractedResume)),
 					overallScore: scores.overallScore,
 					cosineSimilarity: scores.cosineSimilarity,
 					keywordMatchPercent: scores.keywordMatchPercent,
 					skillOverlapPercent: scores.skillOverlapPercent,
 					experienceRelevance: scores.experienceRelevance,
-					recommendations: recommendations as unknown as Record<
-						string,
-						unknown
-					>,
+					recommendations: JSON.parse(JSON.stringify(recommendations)),
 					priorityKeywords,
 					missingSkills,
 				},
@@ -113,6 +259,7 @@ export const atsRouter = createTRPCRouter({
 		}),
 
 	// Optimize resume based on ATS analysis
+	// @deprecated Use /api/ats/optimize streaming endpoint instead
 	optimizeResume: protectedProcedure
 		.input(
 			z.object({
@@ -178,20 +325,14 @@ export const atsRouter = createTRPCRouter({
 				analysis = await ctx.db.aTSAnalysis.create({
 					data: {
 						resumeId: resume.id,
-						extractedJob: extractedJob as unknown as Record<string, unknown>,
-						extractedResume: extractedResume as unknown as Record<
-							string,
-							unknown
-						>,
+						extractedJob: JSON.parse(JSON.stringify(extractedJob)),
+						extractedResume: JSON.parse(JSON.stringify(extractedResume)),
 						overallScore: scores.overallScore,
 						cosineSimilarity: scores.cosineSimilarity,
 						keywordMatchPercent: scores.keywordMatchPercent,
 						skillOverlapPercent: scores.skillOverlapPercent,
 						experienceRelevance: scores.experienceRelevance,
-						recommendations: recommendations as unknown as Record<
-							string,
-							unknown
-						>,
+						recommendations: JSON.parse(JSON.stringify(recommendations)),
 						priorityKeywords,
 						missingSkills,
 					},
@@ -220,7 +361,7 @@ export const atsRouter = createTRPCRouter({
 			};
 
 			// Optimize resume
-			const { optimizedResume, modifications } = await optimizeResumeForATS(
+			const { modifications } = await optimizeResumeForATS(
 				resume.jobDescription,
 				extractedJob,
 				extractedResume,
@@ -231,17 +372,68 @@ export const atsRouter = createTRPCRouter({
 				analysis.missingSkills,
 			);
 
-			// Save modified resume
+			const portfolio = resume.user.portfolio;
+
+			// Save modified resume with structured data from portfolio
+			// Note: The optimizedResume markdown is discarded since this endpoint is deprecated.
+			// Use /api/ats/optimize for proper structured optimization.
 			const modifiedResume = await ctx.db.modifiedResume.create({
 				data: {
 					originalResumeId: resume.id,
 					name: `${resume.name} - Optimized`,
-					modifiedContent: { markdown: optimizedResume } as unknown as Record<
-						string,
-						unknown
-					>,
-					modifications: modifications as unknown as Record<string, unknown>,
+					contactName: portfolio.name,
+					email: portfolio.email,
+					phone: portfolio.phone,
+					linkedin: portfolio.linkedin,
+					github: portfolio.github,
+					website: portfolio.website,
+					modifications: modifications,
 					atsScore: scores.overallScore,
+					workExperiences: {
+						create: portfolio.workExperiences.map((exp) => ({
+							jobTitle: exp.jobTitle,
+							company: exp.company,
+							location: exp.location,
+							startDate: exp.startDate,
+							endDate: exp.endDate,
+							isCurrent: exp.isCurrent,
+							bulletPoints: exp.bulletPoints,
+						})),
+					},
+					educations: {
+						create: portfolio.educations.map((edu) => ({
+							institution: edu.institution,
+							degree: edu.degree,
+							fieldOfStudy: edu.fieldOfStudy,
+							gpa: edu.gpa,
+							startDate: edu.startDate,
+							endDate: edu.endDate,
+							isCurrent: edu.isCurrent,
+						})),
+					},
+					projects: {
+						create: portfolio.projects.map((proj) => ({
+							name: proj.name,
+							description: proj.description,
+							bulletPoints: proj.bulletPoints,
+							technologies: proj.technologies,
+							url: proj.url,
+						})),
+					},
+					achievements: {
+						create: portfolio.achievements.map((ach) => ({
+							title: ach.title,
+							description: ach.description,
+							category: ach.category,
+							date: ach.date,
+						})),
+					},
+					skills: {
+						create: portfolio.skills.map((ps) => ({
+							name: ps.skill.name,
+							category: ps.skill.category,
+						})),
+					},
 				},
 			});
 
@@ -256,6 +448,22 @@ export const atsRouter = createTRPCRouter({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
+			type ModifiedResumeWithIncludes = Awaited<
+				ReturnType<
+					typeof ctx.db.modifiedResume.findMany<{
+						include: {
+							workExperiences: true;
+							educations: true;
+							projects: true;
+							achievements: true;
+							skills: true;
+						};
+					}>
+				>
+			>;
+
+			let modifiedResumes: ModifiedResumeWithIncludes;
+
 			if (input.resumeId) {
 				const resume = await ctx.db.resume.findUnique({
 					where: { id: input.resumeId },
@@ -265,26 +473,61 @@ export const atsRouter = createTRPCRouter({
 					throw new Error("Resume not found");
 				}
 
-				return ctx.db.modifiedResume.findMany({
+				modifiedResumes = await ctx.db.modifiedResume.findMany({
 					where: { originalResumeId: input.resumeId },
+					include: {
+						workExperiences: { orderBy: { startDate: "desc" } },
+						educations: { orderBy: { startDate: "desc" } },
+						projects: { orderBy: { createdAt: "desc" } },
+						achievements: { orderBy: { date: "desc" } },
+						skills: { orderBy: { createdAt: "asc" } },
+					},
+					orderBy: { createdAt: "desc" },
+				});
+			} else {
+				// Get all resumes for user, then get modified versions
+				const resumes = await ctx.db.resume.findMany({
+					where: { userId: ctx.session.user.id },
+					select: { id: true },
+				});
+
+				modifiedResumes = await ctx.db.modifiedResume.findMany({
+					where: {
+						originalResumeId: {
+							in: resumes.map((r) => r.id),
+						},
+					},
+					include: {
+						workExperiences: { orderBy: { startDate: "desc" } },
+						educations: { orderBy: { startDate: "desc" } },
+						projects: { orderBy: { createdAt: "desc" } },
+						achievements: { orderBy: { date: "desc" } },
+						skills: { orderBy: { createdAt: "asc" } },
+					},
 					orderBy: { createdAt: "desc" },
 				});
 			}
 
-			// Get all resumes for user, then get modified versions
-			const resumes = await ctx.db.resume.findMany({
-				where: { userId: ctx.session.user.id },
-				select: { id: true },
-			});
-
-			return ctx.db.modifiedResume.findMany({
-				where: {
-					originalResumeId: {
-						in: resumes.map((r) => r.id),
-					},
+			// Convert structured data to markdown for backward compatibility with frontend
+			return modifiedResumes.map((mr) => ({
+				...mr,
+				modifiedContent: {
+					markdown: modifiedResumeToMarkdown({
+						contactName: mr.contactName,
+						email: mr.email,
+						phone: mr.phone,
+						linkedin: mr.linkedin,
+						github: mr.github,
+						website: mr.website,
+						professionalSummary: mr.professionalSummary,
+						workExperiences: mr.workExperiences,
+						educations: mr.educations,
+						skills: mr.skills,
+						projects: mr.projects,
+						achievements: mr.achievements,
+					}),
 				},
-				orderBy: { createdAt: "desc" },
-			});
+			}));
 		}),
 
 	// Compare original vs modified resume
@@ -306,6 +549,11 @@ export const atsRouter = createTRPCRouter({
 							},
 						},
 					},
+					workExperiences: { orderBy: { startDate: "desc" } },
+					educations: { orderBy: { startDate: "desc" } },
+					projects: { orderBy: { createdAt: "desc" } },
+					achievements: { orderBy: { date: "desc" } },
+					skills: { orderBy: { createdAt: "asc" } },
 				},
 			});
 
@@ -321,13 +569,34 @@ export const atsRouter = createTRPCRouter({
 
 			const originalAnalysis = originalResume.atsAnalyses[0];
 
+			// Convert structured data to markdown for backward compatibility
+			const modifiedResumeWithMarkdown = {
+				...modifiedResume,
+				modifiedContent: {
+					markdown: modifiedResumeToMarkdown({
+						contactName: modifiedResume.contactName,
+						email: modifiedResume.email,
+						phone: modifiedResume.phone,
+						linkedin: modifiedResume.linkedin,
+						github: modifiedResume.github,
+						website: modifiedResume.website,
+						professionalSummary: modifiedResume.professionalSummary,
+						workExperiences: modifiedResume.workExperiences,
+						educations: modifiedResume.educations,
+						skills: modifiedResume.skills,
+						projects: modifiedResume.projects,
+						achievements: modifiedResume.achievements,
+					}),
+				},
+			};
+
 			return {
 				original: {
 					resume: originalResume,
 					analysis: originalAnalysis,
 				},
 				modified: {
-					resume: modifiedResume,
+					resume: modifiedResumeWithMarkdown,
 					score: modifiedResume.atsScore,
 				},
 			};

@@ -97,7 +97,8 @@ interface Portfolio {
 	projects: Array<{
 		id: string;
 		name: string;
-		description: string;
+		description?: string | null;
+		bulletPoints: string[];
 		technologies: string[];
 		url?: string | null;
 		startDate?: Date | null;

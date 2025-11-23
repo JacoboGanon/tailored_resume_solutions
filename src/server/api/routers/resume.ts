@@ -30,12 +30,51 @@ export const resumeRouter = createTRPCRouter({
 			});
 		}),
 
-	// Get resume history
+	// Get resume history (includes both original and optimized resumes)
 	getResumeHistory: protectedProcedure.query(async ({ ctx }) => {
-		return ctx.db.resume.findMany({
+		const resumes = await ctx.db.resume.findMany({
 			where: { userId: ctx.session.user.id },
 			orderBy: { createdAt: "desc" },
 		});
+
+		// Get all modified resumes for the user's resumes
+		const modifiedResumes = await ctx.db.modifiedResume.findMany({
+			where: {
+				originalResumeId: {
+					in: resumes.map((r) => r.id),
+				},
+			},
+			orderBy: { createdAt: "desc" },
+			include: {
+				originalResume: true,
+			},
+		});
+
+		// Format modified resumes to look like regular resumes for display
+		const formattedOptimized = modifiedResumes.map((modified) => ({
+			id: modified.id,
+			userId: modified.originalResume.userId,
+			name: modified.name,
+			jobDescription: modified.originalResume.jobDescription,
+			selectedItemIds: modified.originalResume.selectedItemIds,
+			pdfUrl: null,
+			createdAt: modified.createdAt,
+			updatedAt: modified.createdAt,
+			isOptimized: true,
+			originalResumeId: modified.originalResumeId,
+			modifiedResumeId: modified.id,
+		}));
+
+		// Mark original resumes
+		const formattedOriginal = resumes.map((resume) => ({
+			...resume,
+			isOptimized: false,
+		}));
+
+		// Combine and sort by creation date
+		return [...formattedOriginal, ...formattedOptimized].sort(
+			(a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+		);
 	}),
 
 	// Get single resume
@@ -53,10 +92,37 @@ export const resumeRouter = createTRPCRouter({
 			return resume;
 		}),
 
-	// Delete resume from history
+	// Delete resume from history (handles both regular and optimized resumes)
 	deleteResume: protectedProcedure
-		.input(z.object({ id: z.string() }))
+		.input(
+			z.object({
+				id: z.string(),
+				isOptimized: z.boolean().optional(),
+			}),
+		)
 		.mutation(async ({ ctx, input }) => {
+			if (input.isOptimized) {
+				// Delete modified resume
+				const modifiedResume = await ctx.db.modifiedResume.findUnique({
+					where: { id: input.id },
+					include: {
+						originalResume: true,
+					},
+				});
+
+				if (
+					!modifiedResume ||
+					modifiedResume.originalResume.userId !== ctx.session.user.id
+				) {
+					throw new Error("Resume not found");
+				}
+
+				return ctx.db.modifiedResume.delete({
+					where: { id: input.id },
+				});
+			}
+
+			// Delete regular resume
 			const resume = await ctx.db.resume.findUnique({
 				where: { id: input.id },
 			});

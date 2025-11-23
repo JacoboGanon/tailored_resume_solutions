@@ -16,7 +16,7 @@ const styles = StyleSheet.create({
 		lineHeight: 1.4,
 	},
 	name: {
-		fontSize: 22,
+		fontSize: 18,
 		fontFamily: "Helvetica-Bold",
 		marginBottom: 8,
 		textAlign: "center",
@@ -24,13 +24,22 @@ const styles = StyleSheet.create({
 	contactInfo: {
 		fontSize: 10,
 		textAlign: "center",
-		marginBottom: 16,
+		marginBottom: 8,
 	},
 	sectionTitle: {
 		fontSize: 12,
 		fontFamily: "Helvetica-Bold",
-		marginTop: 14,
-		marginBottom: 8,
+		marginTop: 8,
+		marginBottom: 6,
+		borderBottomWidth: 1,
+		borderBottomColor: "#000",
+		paddingBottom: 2,
+	},
+	sectionTitleFirst: {
+		fontSize: 12,
+		fontFamily: "Helvetica-Bold",
+		marginTop: 8,
+		marginBottom: 6,
 		borderBottomWidth: 1,
 		borderBottomColor: "#000",
 		paddingBottom: 2,
@@ -73,6 +82,7 @@ interface ResumeData {
 		github?: string | null;
 		website?: string | null;
 	};
+	professionalSummary?: string | null;
 	workExperiences: Array<{
 		id: string;
 		jobTitle: string;
@@ -145,6 +155,17 @@ export const ResumeDocument = ({ data }: { data: ResumeData }) => {
 		contactParts.push("Website");
 	}
 
+	// Determine which is the first section to apply proper spacing
+	const hasProfessionalSummary = !!data.professionalSummary;
+	const hasWorkExperience = data.workExperiences.length > 0;
+	const hasEducation = data.educations.length > 0;
+	const hasSkills = data.skills.length > 0;
+	const hasProjects = !!(data.projects && data.projects.length > 0);
+	const hasAchievements = !!(data.achievements && data.achievements.length > 0);
+
+	const getSectionStyle = (isFirst: boolean) =>
+		isFirst ? styles.sectionTitleFirst : styles.sectionTitle;
+
 	return (
 		<Document>
 			<Page size="A4" style={styles.page}>
@@ -181,10 +202,26 @@ export const ResumeDocument = ({ data }: { data: ResumeData }) => {
 					</Text>
 				</View>
 
+				{/* Professional Summary */}
+				{data.professionalSummary && (
+					<View>
+						<Text style={getSectionStyle(hasProfessionalSummary)}>
+							PROFESSIONAL SUMMARY
+						</Text>
+						<Text style={styles.text}>{data.professionalSummary}</Text>
+					</View>
+				)}
+
 				{/* Work Experience */}
 				{data.workExperiences.length > 0 && (
 					<View>
-						<Text style={styles.sectionTitle}>EXPERIENCE</Text>
+						<Text
+							style={getSectionStyle(
+								!hasProfessionalSummary && hasWorkExperience,
+							)}
+						>
+							EXPERIENCE
+						</Text>
 						{data.workExperiences.map((exp) => (
 							<View key={exp.id} style={{ marginBottom: 10 }}>
 								<View style={styles.row}>
@@ -211,7 +248,13 @@ export const ResumeDocument = ({ data }: { data: ResumeData }) => {
 				{/* Education */}
 				{data.educations.length > 0 && (
 					<View>
-						<Text style={styles.sectionTitle}>EDUCATION</Text>
+						<Text
+							style={getSectionStyle(
+								!hasProfessionalSummary && !hasWorkExperience && hasEducation,
+							)}
+						>
+							EDUCATION
+						</Text>
 						{data.educations.map((edu) => (
 							<View key={edu.id} style={{ marginBottom: 8 }}>
 								<View style={styles.row}>
@@ -235,7 +278,16 @@ export const ResumeDocument = ({ data }: { data: ResumeData }) => {
 				{/* Skills */}
 				{data.skills.length > 0 && (
 					<View>
-						<Text style={styles.sectionTitle}>SKILLS</Text>
+						<Text
+							style={getSectionStyle(
+								!hasProfessionalSummary &&
+									!hasWorkExperience &&
+									!hasEducation &&
+									hasSkills,
+							)}
+						>
+							SKILLS
+						</Text>
 						<Text style={styles.text}>
 							{data.skills.map((skill, index) => (
 								<Text key={skill.id}>
@@ -250,9 +302,19 @@ export const ResumeDocument = ({ data }: { data: ResumeData }) => {
 				{/* Projects */}
 				{data.projects && data.projects.length > 0 && (
 					<View>
-						<Text style={styles.sectionTitle}>PROJECTS</Text>
+						<Text
+							style={getSectionStyle(
+								!hasProfessionalSummary &&
+									!hasWorkExperience &&
+									!hasEducation &&
+									!hasSkills &&
+									hasProjects,
+							)}
+						>
+							PROJECTS
+						</Text>
 						{data.projects.map((project) => (
-							<View key={project.id} style={{ marginBottom: 10 }}>
+							<View key={project.id} style={{ marginBottom: 6 }}>
 								<View style={styles.row}>
 									<Text style={styles.textBold}>{project.name}</Text>
 									{project.url && (
@@ -281,7 +343,18 @@ export const ResumeDocument = ({ data }: { data: ResumeData }) => {
 				{/* Achievements */}
 				{data.achievements && data.achievements.length > 0 && (
 					<View>
-						<Text style={styles.sectionTitle}>ACHIEVEMENTS</Text>
+						<Text
+							style={getSectionStyle(
+								!hasProfessionalSummary &&
+									!hasWorkExperience &&
+									!hasEducation &&
+									!hasSkills &&
+									!hasProjects &&
+									hasAchievements,
+							)}
+						>
+							ACHIEVEMENTS
+						</Text>
 						{data.achievements.map((achievement) => (
 							<View key={achievement.id} style={{ marginBottom: 8 }}>
 								<View style={styles.row}>

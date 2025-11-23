@@ -263,15 +263,115 @@ model ATSAnalysis {
 model ModifiedResume {
   id                 String   @id @default(cuid())
   originalResumeId   String
-  originalResume      Resume   @relation(fields: [originalResumeId], references: [id], onDelete: Cascade)
+  originalResume     Resume   @relation(fields: [originalResumeId], references: [id], onDelete: Cascade)
   
   name               String
-  modifiedContent    Json     @db.JsonB  // AI-modified resume data
+  // Contact Info fields
+  contactName        String?
+  email              String?
+  phone              String?
+  linkedin           String?
+  github             String?
+  website            String?
+  professionalSummary String? @db.Text
+  
   modifications      Json     @db.JsonB  // Log of changes made
   atsScore           Float?   // ATS score after modifications
   
   createdAt          DateTime @default(now())
   
+  // Relations
+  workExperiences    ModifiedWorkExperience[]
+  educations         ModifiedEducation[]
+  projects           ModifiedProject[]
+  achievements       ModifiedAchievement[]
+  skills             ModifiedSkill[]
+  
   @@index([originalResumeId])
   @@map("modified_resume")
+}
+
+model ModifiedWorkExperience {
+  id           String         @id @default(cuid())
+  modifiedResumeId String
+  modifiedResume   ModifiedResume @relation(fields: [modifiedResumeId], references: [id], onDelete: Cascade)
+  
+  jobTitle     String
+  company      String
+  location     String?
+  startDate    DateTime
+  endDate      DateTime?
+  isCurrent    Boolean   @default(false)
+  bulletPoints String[]  @default([])
+  
+  createdAt    DateTime  @default(now())
+  
+  @@index([modifiedResumeId])
+  @@map("modified_work_experience")
+}
+
+model ModifiedEducation {
+  id           String         @id @default(cuid())
+  modifiedResumeId String
+  modifiedResume   ModifiedResume @relation(fields: [modifiedResumeId], references: [id], onDelete: Cascade)
+  
+  institution  String
+  degree       String
+  fieldOfStudy String
+  gpa          String?
+  startDate    DateTime
+  endDate      DateTime?
+  isCurrent    Boolean   @default(false)
+  
+  createdAt    DateTime  @default(now())
+  
+  @@index([modifiedResumeId])
+  @@map("modified_education")
+}
+
+model ModifiedProject {
+  id           String         @id @default(cuid())
+  modifiedResumeId String
+  modifiedResume   ModifiedResume @relation(fields: [modifiedResumeId], references: [id], onDelete: Cascade)
+  
+  name         String
+  description  String?   @db.Text
+  bulletPoints String[]  @default([])
+  technologies String[]  @default([])
+  url          String?
+  
+  createdAt    DateTime  @default(now())
+  
+  @@index([modifiedResumeId])
+  @@map("modified_project")
+}
+
+model ModifiedAchievement {
+  id          String         @id @default(cuid())
+  modifiedResumeId String
+  modifiedResume   ModifiedResume @relation(fields: [modifiedResumeId], references: [id], onDelete: Cascade)
+  
+  title       String
+  description String    @db.Text
+  date        DateTime?
+  category    String
+  
+  createdAt   DateTime  @default(now())
+  
+  @@index([modifiedResumeId])
+  @@map("modified_achievement")
+}
+
+model ModifiedSkill {
+  id          String         @id @default(cuid())
+  modifiedResumeId String
+  modifiedResume   ModifiedResume @relation(fields: [modifiedResumeId], references: [id], onDelete: Cascade)
+  
+  name        String
+  category    String?
+  
+  createdAt   DateTime  @default(now())
+  
+  @@index([modifiedResumeId])
+  @@map("modified_skill")
 }

@@ -68,6 +68,10 @@ export async function POST(req: Request) {
 				};
 
 				try {
+					if (!resume.user.portfolio) {
+						throw new Error("Portfolio not found");
+					}
+
 					sendProgress("Extracting job posting structure...");
 					const extractedJob = await extractJobPosting(resume.jobDescription);
 
@@ -91,20 +95,14 @@ export async function POST(req: Request) {
 					const analysis = await db.aTSAnalysis.create({
 						data: {
 							resumeId: resume.id,
-							extractedJob: extractedJob as unknown as Record<string, unknown>,
-							extractedResume: extractedResume as unknown as Record<
-								string,
-								unknown
-							>,
+							extractedJob: JSON.parse(JSON.stringify(extractedJob)),
+							extractedResume: JSON.parse(JSON.stringify(extractedResume)),
 							overallScore: scores.overallScore,
 							cosineSimilarity: scores.cosineSimilarity,
 							keywordMatchPercent: scores.keywordMatchPercent,
 							skillOverlapPercent: scores.skillOverlapPercent,
 							experienceRelevance: scores.experienceRelevance,
-							recommendations: recommendations as unknown as Record<
-								string,
-								unknown
-							>,
+							recommendations: JSON.parse(JSON.stringify(recommendations)),
 							priorityKeywords,
 							missingSkills,
 						},

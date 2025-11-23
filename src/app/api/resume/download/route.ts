@@ -1,11 +1,14 @@
 import { renderToBuffer } from "@react-pdf/renderer";
+import { Packer } from "docx";
 import { ResumeDocument } from "~/components/pdf/resume-template";
+import { createResumeDocument } from "~/components/docx/resume-template";
 import { getSession } from "~/server/better-auth/server";
 import { db } from "~/server/db";
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
+	let format = "pdf";
 	try {
 		const session = await getSession();
 
@@ -13,10 +16,18 @@ export async function POST(req: Request) {
 			return new Response("Unauthorized", { status: 401 });
 		}
 
-		const { resumeId } = await req.json();
+		const requestData = await req.json();
+		const { resumeId } = requestData;
+		format = requestData.format ?? "pdf";
 
 		if (!resumeId) {
 			return new Response("Resume ID required", { status: 400 });
+		}
+
+		if (format !== "pdf" && format !== "docx") {
+			return new Response("Invalid format. Must be 'pdf' or 'docx'", {
+				status: 400,
+			});
 		}
 
 		// Fetch the resume
@@ -97,7 +108,23 @@ export async function POST(req: Request) {
 			achievements: portfolio.achievements,
 		};
 
-		// Generate PDF
+		const sanitizedName = resume.name.replace(/[^a-z0-9]/gi, "_");
+
+		if (format === "docx") {
+			// Generate DOCX
+			const doc = createResumeDocument(resumeData);
+			const buffer = await Packer.toBuffer(doc);
+
+			return new Response(new Uint8Array(buffer), {
+				headers: {
+					"Content-Type":
+						"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+					"Content-Disposition": `attachment; filename="${sanitizedName}.docx"`,
+				},
+			});
+		}
+
+		// Generate PDF (default)
 		const pdfBuffer = await renderToBuffer(
 			ResumeDocument({ data: resumeData }),
 		);
@@ -106,11 +133,11 @@ export async function POST(req: Request) {
 		return new Response(new Uint8Array(pdfBuffer), {
 			headers: {
 				"Content-Type": "application/pdf",
-				"Content-Disposition": `attachment; filename="${resume.name.replace(/[^a-z0-9]/gi, "_")}.pdf"`,
+				"Content-Disposition": `attachment; filename="${sanitizedName}.pdf"`,
 			},
 		});
 	} catch (error) {
-		console.error("Error generating PDF:", error);
+		console.error(`Error generating ${format}:`, error);
 		return new Response("Internal server error", { status: 500 });
 	}
 }

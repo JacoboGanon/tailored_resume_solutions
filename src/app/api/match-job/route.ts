@@ -38,8 +38,15 @@ export async function POST(req: Request) {
 			return new Response("Portfolio not found", { status: 404 });
 		}
 
+		// Transform portfolio to match expected type
+		// Projects already have bulletPoints from the schema, so we just need to ensure the type matches
+		const portfolioWithBulletPoints = portfolio;
+
 		// Call AI matching function
-		const result = await matchJobToPortfolio(jobDescription, portfolio);
+		const result = await matchJobToPortfolio(
+			jobDescription,
+			portfolioWithBulletPoints,
+		);
 
 		// Return the stream
 		return result.toTextStreamResponse();
