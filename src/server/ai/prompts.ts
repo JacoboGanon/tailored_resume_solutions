@@ -49,6 +49,12 @@ Consider the following factors:
 5. Level of responsibility and seniority
 6. Industry-specific keywords and terminology
 
+Generate a professional resume title based on the job description that:
+- Captures the core role and key specialization (e.g., "Senior Software Engineer - Cloud Infrastructure")
+- Is concise and professional (typically 3-8 words)
+- Includes the company name if it's well-known (e.g., "Software Engineer at Google")
+- Focuses on the primary role, not generic terms
+
 Select items that:
 - Directly align with the job requirements
 - Demonstrate relevant skills and experience
@@ -125,7 +131,8 @@ export const formatPortfolioForAI = (portfolio: {
 	projects: Array<{
 		id: string;
 		name: string;
-		description: string;
+		description?: string | null;
+		bulletPoints: string[];
 		technologies: string[];
 		url?: string | null;
 		startDate?: Date | null;
@@ -175,7 +182,9 @@ export const formatPortfolioForAI = (portfolio: {
 	formatted += "\n# Projects\n\n";
 	for (const proj of portfolio.projects) {
 		formatted += `## [ID: ${proj.id}] ${proj.name}\n`;
-		formatted += `Description: ${proj.description}\n`;
+		if (proj.bulletPoints.length > 0) {
+			formatted += `Highlights:\n${proj.bulletPoints.map((b) => `- ${b}`).join("\n")}\n`;
+		}
 		formatted += `Technologies: ${proj.technologies.join(", ")}\n`;
 		if (proj.url) formatted += `URL: ${proj.url}\n`;
 		formatted += "\n";

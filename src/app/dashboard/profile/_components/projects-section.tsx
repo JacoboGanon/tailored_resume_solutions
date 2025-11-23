@@ -29,6 +29,76 @@ import { api, type RouterOutputs } from "~/trpc/react";
 
 type portfolio = RouterOutputs["portfolio"]["getOrCreate"];
 
+/**
+ * Parse bullet points from pasted text
+ * Handles various formats: -, *, •, ●, numbered lists, and multi-line bullets
+ */
+function parseBulletPoints(text: string): string[] {
+	if (!text.trim()) return [];
+
+	// Normalize line endings
+	const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+	const lines = normalizedText.split("\n");
+
+	const bulletPoints: string[] = [];
+	let currentBullet = "";
+	let inBullet = false; // Track if we're currently processing a bullet (even if empty)
+
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i] || "";
+
+		// Check if this line starts with a bullet marker
+		// Match: ●, •, -, *, or numbered lists (1., 2., etc.) at start of line
+		const bulletMatch = line.match(/^\s*(●|•|[-*]|\d+\.)\s*(.*)$/);
+
+		if (bulletMatch) {
+			// Save previous bullet if it exists
+			if (inBullet && currentBullet.trim()) {
+				bulletPoints.push(currentBullet.trim());
+			}
+			// Start new bullet with content after marker
+			currentBullet = bulletMatch[2] || "";
+			inBullet = true; // Mark that we're in bullet mode
+		} else if (inBullet && line.trim()) {
+			// Continue current bullet (multi-line) - allow continuation even if currentBullet is empty
+			// Add space if needed
+			const trimmedLine = line.trim();
+			if (trimmedLine) {
+				currentBullet += (currentBullet ? " " : "") + trimmedLine;
+			}
+		} else if (inBullet && !line.trim()) {
+			// Empty line - finish current bullet
+			if (currentBullet.trim()) {
+				bulletPoints.push(currentBullet.trim());
+			}
+			currentBullet = "";
+			inBullet = false;
+		} else if (!inBullet && line.trim()) {
+			// Line without bullet marker and not in bullet mode - treat as standalone bullet
+			bulletPoints.push(line.trim());
+		}
+	}
+
+	// Don't forget the last bullet
+	if (inBullet && currentBullet.trim()) {
+		bulletPoints.push(currentBullet.trim());
+	}
+
+	// If no bullets found with markers, try splitting by double newlines
+	if (bulletPoints.length === 0) {
+		const doubleNewlineSplit = normalizedText.split(/\n\n+/);
+		if (doubleNewlineSplit.length > 1) {
+			return doubleNewlineSplit
+				.map((part) => part.trim().replace(/\n/g, " "))
+				.filter((part) => part.length > 0);
+		}
+		// Last resort: return as single bullet
+		return [normalizedText.trim()].filter((b) => b.length > 0);
+	}
+
+	return bulletPoints.filter((bullet) => bullet.length > 0);
+}
+
 export function ProjectsSection({
 	portfolio,
 }: {
@@ -41,12 +111,13 @@ export function ProjectsSection({
 	>(null);
 	const [formData, setFormData] = useState({
 		name: "",
-		description: "",
+		bulletPoints: [""],
 		technologies: [""],
 		url: "",
 		startDate: "",
 		endDate: "",
 	});
+	const [pasteText, setPasteText] = useState("");
 
 	const addMutation = api.portfolio.addProject.useMutation({
 		onSuccess: () => {
@@ -76,20 +147,34 @@ export function ProjectsSection({
 	const resetForm = () => {
 		setFormData({
 			name: "",
-			description: "",
+			bulletPoints: [""],
 			technologies: [""],
 			url: "",
 			startDate: "",
 			endDate: "",
 		});
 		setEditingProject(null);
+		setPasteText("");
+	};
+
+	const handlePasteBullets = (text: string) => {
+		const parsed = parseBulletPoints(text);
+		if (parsed.length > 0) {
+			setFormData({
+				...formData,
+				bulletPoints: parsed,
+			});
+			setPasteText("");
+			toast.success(`Added ${parsed.length} bullet points`);
+		}
 	};
 
 	const handleEdit = (project: portfolio["projects"][number]) => {
 		setEditingProject(project);
 		setFormData({
 			name: project.name,
-			description: project.description,
+			bulletPoints:
+				project.bulletPoints.length > 0 ? project.bulletPoints : [""],
 			technologies: project.technologies,
 			url: project.url || "",
 			startDate: project.startDate
@@ -105,7 +190,7 @@ export function ProjectsSection({
 	const handleSubmit = () => {
 		const data = {
 			name: formData.name,
-			description: formData.description,
+			bulletPoints: formData.bulletPoints.filter((b) => b.trim()),
 			technologies: formData.technologies.filter((t) => t.trim()),
 			url: formData.url || undefined,
 			startDate: formData.startDate
@@ -177,24 +262,6 @@ export function ProjectsSection({
 										/>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="projectDescription">
-											Description <span className="text-destructive">*</span>
-										</Label>
-										<Textarea
-											className="resize-none"
-											id="projectDescription"
-											onChange={(e) =>
-												setFormData({
-													...formData,
-													description: e.target.value,
-												})
-											}
-											placeholder="Describe your project, its purpose, and the impact it made"
-											rows={4}
-											value={formData.description}
-										/>
-									</div>
-									<div className="space-y-2">
 										<Label htmlFor="projectUrl">Project URL</Label>
 										<Input
 											id="projectUrl"
@@ -208,6 +275,103 @@ export function ProjectsSection({
 											Link to your project's repository, demo, or documentation
 										</p>
 									</div>
+								</div>
+							</div>
+
+							<Separator />
+
+							{/* Bullet Points */}
+							<div className="space-y-4">
+								<div>
+									<h4 className="font-medium text-muted-foreground text-sm">
+										Project Highlights
+									</h4>
+									<p className="mt-1 text-muted-foreground text-xs">
+										Describe key features, achievements, and your contributions
+									</p>
+								</div>
+								<div className="space-y-3">
+									{formData.bulletPoints.map((bullet, index) => (
+										<div
+											className="flex items-start gap-3"
+											key={`bullet-${index}-${bullet.slice(0, 20)}`}
+										>
+											<div className="flex h-10 min-w-8 items-center justify-center rounded-md bg-muted px-2 font-medium text-muted-foreground text-sm">
+												{index + 1}
+											</div>
+											<Input
+												className="flex-1"
+												onChange={(e) => {
+													const newBullets = [...formData.bulletPoints];
+													newBullets[index] = e.target.value;
+													setFormData({
+														...formData,
+														bulletPoints: newBullets,
+													});
+												}}
+												placeholder="Describe a feature or achievement"
+												value={bullet}
+											/>
+											<Button
+												className="shrink-0 text-muted-foreground hover:text-destructive"
+												onClick={() => {
+													const newBullets = formData.bulletPoints.filter(
+														(_, i) => i !== index,
+													);
+													setFormData({
+														...formData,
+														bulletPoints:
+															newBullets.length > 0 ? newBullets : [""],
+													});
+												}}
+												size="icon"
+												variant="ghost"
+											>
+												<X className="h-4 w-4" />
+											</Button>
+										</div>
+									))}
+									<Button
+										className="w-full"
+										onClick={() =>
+											setFormData({
+												...formData,
+												bulletPoints: [...formData.bulletPoints, ""],
+											})
+										}
+										size="sm"
+										variant="outline"
+									>
+										<Plus className="mr-2 h-4 w-4" />
+										Add Bullet Point
+									</Button>
+								</div>
+								<div className="space-y-2 rounded-lg border bg-muted/50 p-4">
+									<Label
+										className="font-medium text-sm"
+										htmlFor="paste-bullets"
+									>
+										Quick Import from Clipboard
+									</Label>
+									<Textarea
+										className="resize-none bg-background"
+										id="paste-bullets"
+										onChange={(e) => setPasteText(e.target.value)}
+										onPaste={(e) => {
+											const text = e.clipboardData.getData("text");
+											if (text.trim()) {
+												e.preventDefault();
+												handlePasteBullets(text);
+											}
+										}}
+										placeholder="Paste your bullet points here (supports -, *, •, or numbered lists)"
+										rows={3}
+										value={pasteText}
+									/>
+									<p className="text-muted-foreground text-xs">
+										💡 Tip: Paste bullet points and they'll be automatically
+										parsed and added above
+									</p>
 								</div>
 							</div>
 
@@ -319,7 +483,7 @@ export function ProjectsSection({
 										addMutation.isPending ||
 										updateMutation.isPending ||
 										!formData.name ||
-										!formData.description
+										formData.bulletPoints.filter((b) => b.trim()).length === 0
 									}
 									onClick={handleSubmit}
 								>
@@ -346,9 +510,18 @@ export function ProjectsSection({
 									<div className="flex items-start justify-between">
 										<div className="flex-1">
 											<h3 className="font-semibold">{project.name}</h3>
-											<p className="mt-1 text-muted-foreground text-sm">
-												{project.description}
-											</p>
+											{project.bulletPoints.length > 0 && (
+												<ul className="mt-2 space-y-1">
+													{project.bulletPoints.map((bullet, index) => (
+														<li
+															className="text-muted-foreground text-sm"
+															key={`${project.id}-bullet-${index}`}
+														>
+															• {bullet}
+														</li>
+													))}
+												</ul>
+											)}
 											<div className="mt-2 flex flex-wrap gap-1">
 												{project.technologies.map((tech: string) => (
 													<Badge key={tech} variant="outline">

@@ -35,6 +35,76 @@ import { api, type RouterOutputs } from "~/trpc/react";
 
 type portfolio = RouterOutputs["portfolio"]["getOrCreate"];
 
+/**
+ * Parse bullet points from pasted text
+ * Handles various formats: -, *, •, ●, numbered lists, and multi-line bullets
+ */
+function parseBulletPoints(text: string): string[] {
+	if (!text.trim()) return [];
+
+	// Normalize line endings
+	const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+	const lines = normalizedText.split("\n");
+
+	const bulletPoints: string[] = [];
+	let currentBullet = "";
+	let inBullet = false; // Track if we're currently processing a bullet (even if empty)
+
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i] || "";
+
+		// Check if this line starts with a bullet marker
+		// Match: ●, •, -, *, or numbered lists (1., 2., etc.) at start of line
+		const bulletMatch = line.match(/^\s*(●|•|[-*]|\d+\.)\s*(.*)$/);
+
+		if (bulletMatch) {
+			// Save previous bullet if it exists
+			if (inBullet && currentBullet.trim()) {
+				bulletPoints.push(currentBullet.trim());
+			}
+			// Start new bullet with content after marker
+			currentBullet = bulletMatch[2] || "";
+			inBullet = true; // Mark that we're in bullet mode
+		} else if (inBullet && line.trim()) {
+			// Continue current bullet (multi-line) - allow continuation even if currentBullet is empty
+			// Add space if needed
+			const trimmedLine = line.trim();
+			if (trimmedLine) {
+				currentBullet += (currentBullet ? " " : "") + trimmedLine;
+			}
+		} else if (inBullet && !line.trim()) {
+			// Empty line - finish current bullet
+			if (currentBullet.trim()) {
+				bulletPoints.push(currentBullet.trim());
+			}
+			currentBullet = "";
+			inBullet = false;
+		} else if (!inBullet && line.trim()) {
+			// Line without bullet marker and not in bullet mode - treat as standalone bullet
+			bulletPoints.push(line.trim());
+		}
+	}
+
+	// Don't forget the last bullet
+	if (inBullet && currentBullet.trim()) {
+		bulletPoints.push(currentBullet.trim());
+	}
+
+	// If no bullets found with markers, try splitting by double newlines
+	if (bulletPoints.length === 0) {
+		const doubleNewlineSplit = normalizedText.split(/\n\n+/);
+		if (doubleNewlineSplit.length > 1) {
+			return doubleNewlineSplit
+				.map((part) => part.trim().replace(/\n/g, " "))
+				.filter((part) => part.length > 0);
+		}
+		// Last resort: return as single bullet
+		return [normalizedText.trim()].filter((b) => b.length > 0);
+	}
+
+	return bulletPoints.filter((bullet) => bullet.length > 0);
+}
+
 export function WorkExperienceSection({
 	portfolio,
 }: {
@@ -54,6 +124,7 @@ export function WorkExperienceSection({
 		isCurrent: false,
 		bulletPoints: [""],
 	});
+	const [pasteText, setPasteText] = useState("");
 
 	const addMutation = api.portfolio.addWorkExperience.useMutation({
 		onSuccess: () => {
@@ -80,12 +151,6 @@ export function WorkExperienceSection({
 		},
 	});
 
-	const parseBulletsMutation = api.portfolio.parseWorkBulletPoints.useMutation({
-		onSuccess: (data) => {
-			setFormData({ ...formData, bulletPoints: data });
-		},
-	});
-
 	const resetForm = () => {
 		setFormData({
 			jobTitle: "",
@@ -96,6 +161,7 @@ export function WorkExperienceSection({
 			isCurrent: false,
 			bulletPoints: [""],
 		});
+		setPasteText("");
 		setEditingExp(null);
 	};
 
@@ -137,7 +203,19 @@ export function WorkExperienceSection({
 	};
 
 	const handlePasteBullets = (text: string) => {
-		parseBulletsMutation.mutate({ text });
+		const parsedBullets = parseBulletPoints(text);
+		if (parsedBullets.length > 0) {
+			// Filter out empty existing bullet points
+			const existingNonEmpty = formData.bulletPoints.filter((b) => b.trim());
+			// Add parsed bullets to the existing ones
+			const newBullets =
+				existingNonEmpty.length > 0
+					? [...existingNonEmpty, ...parsedBullets]
+					: parsedBullets;
+			setFormData({ ...formData, bulletPoints: newBullets });
+			// Clear the paste textarea
+			setPasteText("");
+		}
 	};
 
 	return (
@@ -351,19 +429,21 @@ export function WorkExperienceSection({
 									<Textarea
 										className="resize-none bg-background"
 										id="paste-bullets"
+										onChange={(e) => setPasteText(e.target.value)}
 										onPaste={(e) => {
 											const text = e.clipboardData.getData("text");
-											if (text.includes("\n")) {
+											if (text.trim()) {
 												e.preventDefault();
 												handlePasteBullets(text);
 											}
 										}}
-										placeholder="Paste your bullet points here (supports -, *, •, or numbered lists)"
+										placeholder="Paste your bullet points here (supports -, *, •, ●, or numbered lists)"
 										rows={3}
+										value={pasteText}
 									/>
 									<p className="text-muted-foreground text-xs">
-										💡 Tip: Paste multiple bullet points and they'll be
-										automatically parsed
+										💡 Tip: Paste bullet points and they'll be automatically
+										parsed and added above
 									</p>
 								</div>
 							</div>

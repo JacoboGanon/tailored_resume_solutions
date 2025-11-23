@@ -178,8 +178,9 @@ model Project {
   portfolioId  String
   portfolio    Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
   name         String
-  description  String    @db.Text
-  technologies String[] @default([])
+  description  String?   @db.Text
+  bulletPoints String[]  @default([])
+  technologies String[]  @default([])
   url          String?
   startDate    DateTime?
   endDate      DateTime?

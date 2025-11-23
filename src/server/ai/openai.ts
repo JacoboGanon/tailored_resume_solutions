@@ -10,6 +10,11 @@ import {
 
 // Schema for the streamObject response
 export const jobMatchSchema = z.object({
+	resumeTitle: z
+		.string()
+		.describe(
+			"A professional, concise title for this resume based on the job description (e.g., 'Senior Software Engineer - Cloud Infrastructure')",
+		),
 	workExperienceIds: z
 		.array(z.string())
 		.describe(

@@ -1,118 +1,65 @@
-import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import {
+	Document,
+	Link,
+	Page,
+	StyleSheet,
+	Text,
+	View,
+} from "@react-pdf/renderer";
 
-// Define styles for the PDF
+// Define styles for the PDF - Simple, ATS-friendly formatting
 const styles = StyleSheet.create({
 	page: {
-		padding: 40,
+		padding: 30,
 		fontSize: 10,
 		fontFamily: "Helvetica",
-		lineHeight: 1.5,
-	},
-	header: {
-		marginBottom: 20,
+		lineHeight: 1.0,
 	},
 	name: {
-		fontSize: 24,
+		fontSize: 20,
 		fontFamily: "Helvetica-Bold",
-		marginBottom: 5,
+		marginBottom: 12,
+		textAlign: "center",
 	},
 	contactInfo: {
-		fontSize: 9,
-		color: "#333",
-		marginBottom: 3,
-	},
-	section: {
-		marginBottom: 15,
+		fontSize: 11,
+		textAlign: "center",
+		marginBottom: 5,
 	},
 	sectionTitle: {
-		fontSize: 12,
+		fontSize: 11,
 		fontFamily: "Helvetica-Bold",
-		marginBottom: 8,
+		marginTop: 5,
+		marginBottom: 3,
 		borderBottomWidth: 1,
 		borderBottomColor: "#000",
-		paddingBottom: 2,
+		paddingBottom: 1,
 	},
-	experienceItem: {
-		marginBottom: 10,
-	},
-	experienceHeader: {
+	row: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		marginBottom: 3,
+		marginBottom: 1,
 	},
-	jobTitle: {
+	textBold: {
 		fontSize: 11,
 		fontFamily: "Helvetica-Bold",
 	},
-	company: {
-		fontSize: 10,
+	text: {
+		fontSize: 11,
+	},
+	textItalic: {
+		fontSize: 11,
 		fontFamily: "Helvetica-Oblique",
 	},
-	location: {
-		fontSize: 9,
-		color: "#555",
-	},
-	dates: {
-		fontSize: 9,
-		color: "#555",
-	},
-	bulletPoints: {
-		marginTop: 3,
-		marginLeft: 15,
+	textSmall: {
+		fontSize: 11,
 	},
 	bullet: {
-		fontSize: 10,
-		marginBottom: 2,
-		flexDirection: "row",
+		fontSize: 11,
+		marginLeft: 15,
+		marginBottom: 1,
 	},
-	bulletSymbol: {
-		width: 10,
-	},
-	bulletText: {
-		flex: 1,
-	},
-	skillsContainer: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		marginTop: 5,
-	},
-	skill: {
-		fontSize: 10,
-		marginRight: 8,
-		marginBottom: 4,
-	},
-	educationItem: {
-		marginBottom: 8,
-	},
-	degree: {
-		fontSize: 10,
-		fontFamily: "Helvetica-Bold",
-	},
-	institution: {
-		fontSize: 10,
-	},
-	projectItem: {
-		marginBottom: 8,
-	},
-	projectName: {
-		fontSize: 10,
-		fontFamily: "Helvetica-Bold",
-	},
-	projectDescription: {
-		fontSize: 9,
-		marginTop: 2,
-	},
-	projectTech: {
-		fontSize: 9,
-		fontFamily: "Helvetica-Oblique",
-		marginTop: 2,
-		color: "#555",
-	},
-	achievementItem: {
-		marginBottom: 6,
-	},
-	achievementTitle: {
-		fontSize: 10,
+	link: {
 		fontFamily: "Helvetica-Bold",
 	},
 });
@@ -154,7 +101,8 @@ interface ResumeData {
 	projects?: Array<{
 		id: string;
 		name: string;
-		description: string;
+		description?: string | null;
+		bulletPoints: string[];
 		technologies: string[];
 		url?: string | null;
 	}>;
@@ -177,144 +125,181 @@ const formatDate = (
 	return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 };
 
-export const ResumeDocument = ({ data }: { data: ResumeData }) => (
-	<Document>
-		<Page size="A4" style={styles.page}>
-			{/* Header */}
-			<View style={styles.header}>
-				<Text style={styles.name}>{data.contactInfo.name}</Text>
-				{data.contactInfo.email && (
-					<Text style={styles.contactInfo}>{data.contactInfo.email}</Text>
-				)}
-				{data.contactInfo.phone && (
-					<Text style={styles.contactInfo}>{data.contactInfo.phone}</Text>
-				)}
-				<View style={{ flexDirection: "row", gap: 10 }}>
-					{data.contactInfo.linkedin && (
-						<Text style={styles.contactInfo}>{data.contactInfo.linkedin}</Text>
-					)}
-					{data.contactInfo.github && (
-						<Text style={styles.contactInfo}>{data.contactInfo.github}</Text>
-					)}
-					{data.contactInfo.website && (
-						<Text style={styles.contactInfo}>{data.contactInfo.website}</Text>
-					)}
-				</View>
-			</View>
+export const ResumeDocument = ({ data }: { data: ResumeData }) => {
+	// Build contact info as simple string
+	const contactParts: string[] = [];
 
-			{/* Work Experience */}
-			{data.workExperiences.length > 0 && (
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>EXPERIENCE</Text>
-					{data.workExperiences.map((exp) => (
-						<View key={exp.id} style={styles.experienceItem}>
-							<View style={styles.experienceHeader}>
-								<View style={{ flex: 1 }}>
-									<Text style={styles.jobTitle}>{exp.jobTitle}</Text>
-									<Text style={styles.company}>
-										{exp.company}
-										{exp.location && ` • ${exp.location}`}
+	if (data.contactInfo.email) {
+		contactParts.push(data.contactInfo.email);
+	}
+	if (data.contactInfo.phone) {
+		contactParts.push(data.contactInfo.phone);
+	}
+	if (data.contactInfo.linkedin) {
+		contactParts.push("LinkedIn");
+	}
+	if (data.contactInfo.github) {
+		contactParts.push("Github");
+	}
+	if (data.contactInfo.website) {
+		contactParts.push("Website");
+	}
+
+	return (
+		<Document>
+			<Page size="A4" style={styles.page}>
+				{/* Header */}
+				<View>
+					<Text style={styles.name}>{data.contactInfo.name}</Text>
+					<Text style={styles.contactInfo}>
+						{data.contactInfo.email && <Text>{data.contactInfo.email}</Text>}
+						{data.contactInfo.phone && <Text> • {data.contactInfo.phone}</Text>}
+						{data.contactInfo.linkedin && (
+							<Text>
+								{" • "}
+								<Link src={data.contactInfo.linkedin} style={styles.link}>
+									LinkedIn
+								</Link>
+							</Text>
+						)}
+						{data.contactInfo.github && (
+							<Text>
+								{" • "}
+								<Link src={data.contactInfo.github} style={styles.link}>
+									Github
+								</Link>
+							</Text>
+						)}
+						{data.contactInfo.website && (
+							<Text>
+								{" • "}
+								<Link src={data.contactInfo.website} style={styles.link}>
+									Website
+								</Link>
+							</Text>
+						)}
+					</Text>
+				</View>
+
+				{/* Work Experience */}
+				{data.workExperiences.length > 0 && (
+					<View>
+						<Text style={styles.sectionTitle}>EXPERIENCE</Text>
+						{data.workExperiences.map((exp) => (
+							<View key={exp.id} style={{ marginBottom: 4 }}>
+								<View style={styles.row}>
+									<Text style={styles.textBold}>{exp.jobTitle}</Text>
+									<Text style={styles.textSmall}>
+										{formatDate(exp.startDate)} -{" "}
+										{formatDate(exp.endDate, exp.isCurrent)}
 									</Text>
 								</View>
-								<Text style={styles.dates}>
-									{formatDate(exp.startDate)} -{" "}
-									{formatDate(exp.endDate, exp.isCurrent)}
+								<Text style={styles.textItalic}>
+									{exp.company}
+									{exp.location && ` • ${exp.location}`}
 								</Text>
-							</View>
-							<View style={styles.bulletPoints}>
 								{exp.bulletPoints.map((bullet) => (
-									<View key={bullet} style={styles.bullet}>
-										<Text style={styles.bulletSymbol}>•</Text>
-										<Text style={styles.bulletText}>{bullet}</Text>
-									</View>
+									<Text key={bullet} style={styles.bullet}>
+										• {bullet}
+									</Text>
 								))}
 							</View>
-						</View>
-					))}
-				</View>
-			)}
+						))}
+					</View>
+				)}
 
-			{/* Education */}
-			{data.educations.length > 0 && (
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>EDUCATION</Text>
-					{data.educations.map((edu) => (
-						<View key={edu.id} style={styles.educationItem}>
-							<View style={styles.experienceHeader}>
-								<View style={{ flex: 1 }}>
-									<Text style={styles.degree}>
+				{/* Education */}
+				{data.educations.length > 0 && (
+					<View>
+						<Text style={styles.sectionTitle}>EDUCATION</Text>
+						{data.educations.map((edu) => (
+							<View key={edu.id} style={{ marginBottom: 3 }}>
+								<View style={styles.row}>
+									<Text style={styles.textBold}>
 										{edu.degree} in {edu.fieldOfStudy}
 									</Text>
-									<Text style={styles.institution}>{edu.institution}</Text>
-								</View>
-								<View>
-									<Text style={styles.dates}>
+									<Text style={styles.textSmall}>
 										{formatDate(edu.startDate)} -{" "}
 										{formatDate(edu.endDate, edu.isCurrent)}
 									</Text>
-									{edu.gpa && <Text style={styles.dates}>GPA: {edu.gpa}</Text>}
 								</View>
+								<Text style={styles.text}>
+									{edu.institution}
+									{edu.gpa && ` • GPA: ${edu.gpa}`}
+								</Text>
 							</View>
-						</View>
-					))}
-				</View>
-			)}
-
-			{/* Skills */}
-			{data.skills.length > 0 && (
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>SKILLS</Text>
-					<View style={styles.skillsContainer}>
-						{data.skills.map((skill, index) => (
-							<Text key={skill.id} style={styles.skill}>
-								{skill.name}
-								{index < data.skills.length - 1 ? " •" : ""}
-							</Text>
 						))}
 					</View>
-				</View>
-			)}
+				)}
 
-			{/* Projects */}
-			{data.projects && data.projects.length > 0 && (
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>PROJECTS</Text>
-					{data.projects.map((project) => (
-						<View key={project.id} style={styles.projectItem}>
-							<Text style={styles.projectName}>{project.name}</Text>
-							<Text style={styles.projectDescription}>
-								{project.description}
-							</Text>
-							<Text style={styles.projectTech}>
-								Technologies: {project.technologies.join(", ")}
-							</Text>
-							{project.url && (
-								<Text style={styles.projectTech}>{project.url}</Text>
-							)}
-						</View>
-					))}
-				</View>
-			)}
+				{/* Skills */}
+				{data.skills.length > 0 && (
+					<View>
+						<Text style={styles.sectionTitle}>SKILLS</Text>
+						<Text style={styles.text}>
+							{data.skills.map((skill, index) => (
+								<Text key={skill.id}>
+									{skill.name}
+									{index < data.skills.length - 1 ? " • " : ""}
+								</Text>
+							))}
+						</Text>
+					</View>
+				)}
 
-			{/* Achievements */}
-			{data.achievements && data.achievements.length > 0 && (
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>ACHIEVEMENTS</Text>
-					{data.achievements.map((achievement) => (
-						<View key={achievement.id} style={styles.achievementItem}>
-							<Text style={styles.achievementTitle}>
-								{achievement.title} ({achievement.category})
-							</Text>
-							<Text style={styles.projectDescription}>
-								{achievement.description}
-							</Text>
-							{achievement.date && (
-								<Text style={styles.dates}>{formatDate(achievement.date)}</Text>
-							)}
-						</View>
-					))}
-				</View>
-			)}
-		</Page>
-	</Document>
-);
+				{/* Projects */}
+				{data.projects && data.projects.length > 0 && (
+					<View>
+						<Text style={styles.sectionTitle}>PROJECTS</Text>
+						{data.projects.map((project) => (
+							<View key={project.id} style={{ marginBottom: 4 }}>
+								<View style={styles.row}>
+									<Text style={styles.textBold}>{project.name}</Text>
+									{project.url && (
+										<Link src={project.url} style={styles.link}>
+											<Text style={styles.textSmall}>Link</Text>
+										</Link>
+									)}
+								</View>
+								{project.technologies.length > 0 && (
+									<Text style={styles.textItalic}>
+										{project.technologies.join(", ")}
+									</Text>
+								)}
+								{project.bulletPoints &&
+									project.bulletPoints.length > 0 &&
+									project.bulletPoints.map((bullet) => (
+										<Text key={bullet} style={styles.bullet}>
+											• {bullet}
+										</Text>
+									))}
+							</View>
+						))}
+					</View>
+				)}
+
+				{/* Achievements */}
+				{data.achievements && data.achievements.length > 0 && (
+					<View>
+						<Text style={styles.sectionTitle}>ACHIEVEMENTS</Text>
+						{data.achievements.map((achievement) => (
+							<View key={achievement.id} style={{ marginBottom: 3 }}>
+								<View style={styles.row}>
+									<Text style={styles.textBold}>
+										{achievement.title} ({achievement.category})
+									</Text>
+									{achievement.date && (
+										<Text style={styles.textSmall}>
+											{formatDate(achievement.date)}
+										</Text>
+									)}
+								</View>
+								<Text style={styles.text}>{achievement.description}</Text>
+							</View>
+						))}
+					</View>
+				)}
+			</Page>
+		</Document>
+	);
+};

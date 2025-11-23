@@ -17,15 +17,17 @@ import {
 	PopoverTrigger,
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
-import { api } from "~/trpc/react";
+import type { CachedSkill } from "~/server/cache/skills";
 
 interface SkillComboboxProps {
+	allSkills: CachedSkill[];
 	onSkillSelect: (skillName: string, skillId?: string) => void;
 	placeholder?: string;
 	className?: string;
 }
 
 export function SkillCombobox({
+	allSkills,
 	onSkillSelect,
 	placeholder = "Add a skill...",
 	className,
@@ -33,12 +35,19 @@ export function SkillCombobox({
 	const [open, setOpen] = React.useState(false);
 	const [search, setSearch] = React.useState("");
 
-	const { data: commonSkills } = api.portfolio.getCommonSkills.useQuery({
-		search: search || undefined,
-	});
+	// Filter skills client-side - only show results after 2+ characters
+	const filteredSkills = React.useMemo(() => {
+		if (search.length < 2) return [];
+		const searchLower = search.toLowerCase();
+		return allSkills.filter((skill) =>
+			skill.name.toLowerCase().includes(searchLower)
+		);
+	}, [allSkills, search]);
 
 	const handleSelect = (skillName: string) => {
-		const skill = commonSkills?.find((s) => s.name === skillName);
+		const skill = allSkills.find(
+			(s) => s.name.toLowerCase() === skillName.toLowerCase()
+		);
 		onSkillSelect(skillName, skill?.id);
 		setSearch("");
 		setOpen(false);
@@ -51,6 +60,10 @@ export function SkillCombobox({
 			setOpen(false);
 		}
 	};
+
+	const showAddCustomOption =
+		search.trim().length >= 2 &&
+		!allSkills.find((s) => s.name.toLowerCase() === search.toLowerCase());
 
 	return (
 		<Popover onOpenChange={setOpen} open={open}>
@@ -73,49 +86,47 @@ export function SkillCombobox({
 						value={search}
 					/>
 					<CommandList>
-						<CommandEmpty>
-							<div className="flex flex-col items-center gap-2 py-4">
-								<p className="text-muted-foreground text-sm">
-									No skills found.
-								</p>
-								{search.trim() && (
-									<Button className="gap-2" onClick={handleAddCustom} size="sm">
-										<Plus className="h-4 w-4" />
-										Add "{search.trim()}"
-									</Button>
-								)}
+						{search.length < 2 ? (
+							<div className="py-6 text-center text-muted-foreground text-sm">
+								Type at least 2 characters to search...
 							</div>
-						</CommandEmpty>
-						<CommandGroup>
-							{commonSkills?.map((skill) => (
-								<CommandItem
-									key={skill.id}
-									onSelect={handleSelect}
-									value={skill.name}
-								>
-									<Check className="mr-2 h-4 w-4 opacity-0" />
-									{skill.name}
-									{skill.category && (
-										<span className="ml-auto text-muted-foreground text-xs">
-											{skill.category}
-										</span>
-									)}
-								</CommandItem>
-							))}
-							{search.trim() &&
-								!commonSkills?.find(
-									(s) => s.name.toLowerCase() === search.toLowerCase(),
-								) && (
+						) : filteredSkills.length === 0 && !showAddCustomOption ? (
+							<CommandEmpty>
+								<div className="flex flex-col items-center gap-2 py-4">
+									<p className="text-muted-foreground text-sm">
+										No skills found.
+									</p>
+								</div>
+							</CommandEmpty>
+						) : (
+							<CommandGroup>
+								{filteredSkills.map((skill) => (
+									<CommandItem
+										key={skill.id}
+										onSelect={handleSelect}
+										value={skill.name}
+									>
+										<Check className="mr-2 h-4 w-4 opacity-0" />
+										<span className="capitalize">{skill.name}</span>
+										{skill.category && (
+											<span className="ml-auto text-muted-foreground text-xs">
+												{skill.category}
+											</span>
+										)}
+									</CommandItem>
+								))}
+								{showAddCustomOption && (
 									<CommandItem
 										className="gap-2"
 										onSelect={handleAddCustom}
 										value={search}
 									>
 										<Plus className="h-4 w-4" />
-										Add "{search.trim()}"
+										Add "<span className="capitalize">{search.trim()}</span>"
 									</CommandItem>
 								)}
-						</CommandGroup>
+							</CommandGroup>
+						)}
 					</CommandList>
 				</Command>
 			</PopoverContent>

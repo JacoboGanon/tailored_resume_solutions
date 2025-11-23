@@ -25,15 +25,20 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Separator } from "~/components/ui/separator";
+import type { CachedInstitution } from "~/server/cache/institutions";
 import { api, type RouterOutputs } from "~/trpc/react";
 
 type portfolio = RouterOutputs["portfolio"]["getOrCreate"];
 
+interface EducationSectionProps {
+	portfolio: portfolio | undefined;
+	allInstitutions: CachedInstitution[];
+}
+
 export function EducationSection({
 	portfolio,
-}: {
-	portfolio: portfolio | undefined;
-}) {
+	allInstitutions,
+}: EducationSectionProps) {
 	const utils = api.useUtils();
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const [editingEdu, setEditingEdu] = useState<
@@ -175,6 +180,7 @@ export function EducationSection({
 										<span className="text-destructive">*</span>
 									</Label>
 									<InstitutionCombobox
+										allInstitutions={allInstitutions}
 										onValueChange={(value) =>
 											setFormData({ ...formData, institution: value })
 										}

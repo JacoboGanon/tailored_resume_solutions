@@ -33,11 +33,19 @@ export default function PersonalizePage() {
 		schema: jobMatchSchema,
 	});
 
+	// Auto-fill resume name when AI generates a title
+	const [hasAutoFilled, setHasAutoFilled] = useState(false);
+	if (object?.resumeTitle && !hasAutoFilled && !resumeName) {
+		setResumeName(object.resumeTitle);
+		setHasAutoFilled(true);
+	}
+
 	const saveResumeMutation = api.resume.saveResume.useMutation({
 		onSuccess: (data) => {
 			toast.success("Resume saved to history");
 			setSavedResumeId(data.id);
 			setResumeName("");
+			setHasAutoFilled(false);
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -51,6 +59,7 @@ export default function PersonalizePage() {
 		}
 
 		setHasAnalyzed(true);
+		setHasAutoFilled(false);
 		submit({ jobDescription });
 	};
 
@@ -440,14 +449,28 @@ export default function PersonalizePage() {
 							</CardHeader>
 							<CardContent className="space-y-4">
 								<div className="space-y-2">
-									<Label>Resume Name (Optional)</Label>
+									<Label htmlFor="resume-name">
+										Resume Name{" "}
+										{object.resumeTitle && (
+											<span className="text-muted-foreground text-xs font-normal">
+												(AI-generated, editable)
+											</span>
+										)}
+									</Label>
 									<input
 										className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+										id="resume-name"
 										onChange={(e) => setResumeName(e.target.value)}
 										placeholder="e.g., Software Engineer at TechCorp"
 										type="text"
 										value={resumeName}
 									/>
+									{object.resumeTitle && resumeName === object.resumeTitle && (
+										<p className="text-muted-foreground text-xs">
+											✨ This name was auto-generated based on the job
+											description
+										</p>
+									)}
 								</div>
 								<div className="flex gap-2">
 									<Button

@@ -1,28 +1,6 @@
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-
-// Helper function to parse bullet points from pasted text
-function parseBulletPoints(text: string): string[] {
-	const lines = text.split("\n");
-	const bulletPoints: string[] = [];
-
-	for (const line of lines) {
-		const trimmedLine = line.trim();
-		if (!trimmedLine) continue;
-
-		// Remove common bullet point markers (-, *, •, numbered lists)
-		const cleaned = trimmedLine
-			.replace(/^[-*•]\s*/, "")
-			.replace(/^\d+\.\s*/, "")
-			.trim();
-
-		if (cleaned) {
-			bulletPoints.push(cleaned);
-		}
-	}
-
-	return bulletPoints;
-}
 
 // Zod schemas for validation
 const contactInfoSchema = z.object({
@@ -57,7 +35,8 @@ const educationSchema = z.object({
 
 const projectSchema = z.object({
 	name: z.string().min(1),
-	description: z.string().min(1),
+	description: z.string().optional(),
+	bulletPoints: z.array(z.string()),
 	technologies: z.array(z.string()),
 	url: z.string().url().optional().or(z.literal("")),
 	startDate: z.date().optional().nullable(),
@@ -170,14 +149,6 @@ export const portfolioRouter = createTRPCRouter({
 				where: { id: input.id },
 			});
 		}),
-
-	// Parse bullet points helper
-	parseWorkBulletPoints: protectedProcedure
-		.input(z.object({ text: z.string() }))
-		.mutation(({ input }) => {
-			return parseBulletPoints(input.text);
-		}),
-
 	// Education CRUD
 	addEducation: protectedProcedure
 		.input(educationSchema)
@@ -227,7 +198,13 @@ export const portfolioRouter = createTRPCRouter({
 	// Skills
 	addSkill: protectedProcedure
 		.input(
-			z.object({ name: z.string().min(1), category: z.string().optional() }),
+			z.object({
+				name: z
+					.string()
+					.min(1)
+					.max(19, "Skill name must be less than 20 characters"),
+				category: z.string().optional(),
+			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			const portfolio = await ctx.db.portfolio.findUnique({
@@ -238,18 +215,23 @@ export const portfolioRouter = createTRPCRouter({
 				throw new Error("Portfolio not found");
 			}
 
+			// Normalize skill name to lowercase
+			const normalizedName = input.name.toLowerCase().trim();
+
 			// Find or create skill
 			let skill = await ctx.db.skill.findUnique({
-				where: { name: input.name },
+				where: { name: normalizedName },
 			});
 
 			if (!skill) {
 				skill = await ctx.db.skill.create({
 					data: {
-						name: input.name,
+						name: normalizedName,
 						category: input.category,
 					},
 				});
+				// Revalidate skills cache when a new skill is created
+				revalidateTag("skills");
 			}
 
 			// Add to portfolio
@@ -405,10 +387,29 @@ export const portfolioRouter = createTRPCRouter({
 		}),
 
 	addCommonInstitution: protectedProcedure
-		.input(z.object({ name: z.string().min(1), type: z.string().min(1) }))
+		.input(
+			z.object({
+				name: z
+					.string()
+					.min(1)
+					.max(99, "Institution name must be less than 100 characters"),
+				type: z.string().min(1),
+			}),
+		)
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.commonInstitution.create({
-				data: input,
+			// Normalize institution name to lowercase
+			const normalizedName = input.name.toLowerCase().trim();
+
+			const institution = await ctx.db.commonInstitution.create({
+				data: {
+					name: normalizedName,
+					type: input.type,
+				},
 			});
+
+			// Revalidate institutions cache when a new institution is created
+			revalidateTag("institutions");
+
+			return institution;
 		}),
 });
