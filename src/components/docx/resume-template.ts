@@ -80,8 +80,8 @@ const createSectionHeader = (
 			bottom: {
 				color: "000000",
 				space: 0, // Reduce space to make border closer to text
-				value: BorderStyle.SINGLE,
-				size: 12, // Increased from 6 to 12 (0.6pt) for better visibility
+				style: BorderStyle.SINGLE,
+				size: 1,
 			},
 		},
 		children: [
@@ -232,8 +232,12 @@ export const createResumeDocument = (data: ResumeData): Document => {
 				exp.company + (exp.location ? ` • ${exp.location}` : "");
 			children.push(
 				new Paragraph({
-					text: companyLine,
-					italics: true,
+					children: [
+						new TextRun({
+							text: companyLine,
+							italics: true,
+						}),
+					],
 					spacing: { after: 100 },
 				}),
 			);
@@ -379,7 +383,12 @@ export const createResumeDocument = (data: ResumeData): Document => {
 				children.push(
 					new Paragraph({
 						text: project.technologies.join(", "),
-						italics: true,
+						children: [
+							new TextRun({
+								text: project.technologies.join(", "),
+								italics: true,
+							}),
+						],
 						spacing: {
 							after: hasBulletPoints ? 100 : isLastProject ? 150 : 100,
 						},
