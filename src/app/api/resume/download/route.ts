@@ -1,7 +1,7 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import { Packer } from "docx";
-import { ResumeDocument } from "~/components/pdf/resume-template";
 import { createResumeDocument } from "~/components/docx/resume-template";
+import { ResumeDocument } from "~/components/pdf/resume-template";
 import { getSession } from "~/server/better-auth/server";
 import { db } from "~/server/db";
 

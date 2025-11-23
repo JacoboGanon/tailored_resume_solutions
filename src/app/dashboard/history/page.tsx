@@ -208,6 +208,7 @@ export default function HistoryPage() {
 													<DropdownMenu>
 														<div className="flex">
 															<Button
+																className="rounded-r-none"
 																onClick={() =>
 																	handleDownload(
 																		resume.id,
@@ -224,15 +225,14 @@ export default function HistoryPage() {
 																}
 																size="sm"
 																variant="ghost"
-																className="rounded-r-none"
 															>
 																<Download className="h-4 w-4" />
 															</Button>
 															<DropdownMenuTrigger asChild>
 																<Button
+																	className="rounded-l-none border-l px-1"
 																	size="sm"
 																	variant="ghost"
-																	className="rounded-l-none border-l px-1"
 																>
 																	<ChevronDown className="h-4 w-4" />
 																</Button>
