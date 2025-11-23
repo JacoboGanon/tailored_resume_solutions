@@ -524,11 +524,8 @@ export default async function Home() {
 								</span>
 							</div>
 						</div>
-						<p className="text-slate-500">
-							Built with Next.js, Better Auth, and OpenAI
-						</p>
 						<div className="flex items-center gap-4 text-slate-500 text-sm">
-							<span>© 2024 TRS Tailored Resume Solutions</span>
+							<span>© 2025 TRS Tailored Resume Solutions</span>
 						</div>
 					</div>
 				</div>
