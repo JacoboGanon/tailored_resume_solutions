@@ -1,4 +1,4 @@
-import type { OptimizedResume } from "~/app/api/ats/optimize/route";
+import type { OptimizedResume } from "~/app/api/ats/optimize/utils";
 
 /**
  * Format date string from AI response to display format
