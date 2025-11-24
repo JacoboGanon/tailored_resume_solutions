@@ -1,4 +1,4 @@
-import { openai, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
+import { type OpenAIResponsesProviderOptions, openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import OpenAI from "openai";
 import { JOB_EXTRACTION_PROMPT, RESUME_EXTRACTION_PROMPT } from "./prompts";

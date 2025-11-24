@@ -585,6 +585,7 @@ export default function ATSAnalyzerPage() {
 						streamingOptimizedResume ||
 						isRefetchingOptimized) && (
 						<ResumeDiffViewer
+							isStreaming={isOptimizing || isRefetchingOptimized}
 							modifications={
 								// Only use modifications from database if not streaming and refetch is complete
 								!isOptimizing && !isRefetchingOptimized && latestOptimizedResume
@@ -612,7 +613,6 @@ export default function ATSAnalyzerPage() {
 									: null
 							}
 							originalResume={generateResumeMarkdown()}
-							isStreaming={isOptimizing || isRefetchingOptimized}
 						/>
 					)}
 				</>

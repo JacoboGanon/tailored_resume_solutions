@@ -4,7 +4,10 @@ import type { OptimizedResume } from "~/app/api/ats/optimize/route";
  * Format date string from AI response to display format
  * Handles formats: YYYY-MM-DD, YYYY-MM, YYYY, and "Present"
  */
-function formatDateString(dateStr: string | null | undefined, isCurrent = false): string {
+function formatDateString(
+	dateStr: string | null | undefined,
+	isCurrent = false,
+): string {
 	if (isCurrent) return "Present";
 	if (!dateStr || dateStr === "Present" || dateStr.trim() === "") {
 		return "";
@@ -21,7 +24,10 @@ function formatDateString(dateStr: string | null | undefined, isCurrent = false)
 			parseInt(day ?? "0", 10),
 		);
 		if (!Number.isNaN(date.getTime())) {
-			return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+			return date.toLocaleDateString("en-US", {
+				month: "short",
+				year: "numeric",
+			});
 		}
 	}
 
@@ -35,7 +41,10 @@ function formatDateString(dateStr: string | null | undefined, isCurrent = false)
 			1,
 		);
 		if (!Number.isNaN(date.getTime())) {
-			return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+			return date.toLocaleDateString("en-US", {
+				month: "short",
+				year: "numeric",
+			});
 		}
 	}
 
@@ -178,4 +187,3 @@ export function formatOptimizedResumeToMarkdown(
 
 	return markdown;
 }
-
