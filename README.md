@@ -5,7 +5,7 @@ An AI-powered resume builder that helps you create, manage, and customize profes
 ## Features
 
 - 📝 **Portfolio Management**: Store and manage your work experience, education, skills, projects, and achievements
-- 🤖 **AI Job Matching**: Uses OpenAI GPT-4o-mini to analyze job descriptions and select the most relevant items from your portfolio
+- 🤖 **AI Job Matching**: Uses OpenAI gpt-5-mini to analyze job descriptions and select the most relevant items from your portfolio
 - 📄 **PDF Generation**: Export professional, ATS-friendly resumes as PDF files
 - 📚 **Resume History**: Save multiple versions of your resume for different job applications
 - 🎨 **Modern UI**: Built with shadcn/ui components and Tailwind CSS
@@ -193,7 +193,7 @@ npm run db:push
 To change the OpenAI model, edit `src/server/ai/openai.ts`:
 
 ```typescript
-model: openai("gpt-4o-mini") // Change to "gpt-4o", "gpt-4-turbo", etc.
+model: openai("gpt-5-mini")
 ```
 
 ### PDF Template

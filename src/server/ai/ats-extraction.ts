@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { openai, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import OpenAI from "openai";
 import { JOB_EXTRACTION_PROMPT, RESUME_EXTRACTION_PROMPT } from "./prompts";
@@ -174,9 +174,13 @@ export async function extractJobPosting(
 	jobDescription: string,
 ): Promise<ExtractedJob> {
 	const { text } = await generateText({
-		model: openai("gpt-4o-mini"),
+		model: openai("gpt-5-mini"),
+		providerOptions: {
+			openai: {
+				reasoningEffort: "minimal",
+			} satisfies OpenAIResponsesProviderOptions,
+		},
 		prompt: JOB_EXTRACTION_PROMPT(jobDescription),
-		temperature: 0.1, // Low temperature for consistent extraction
 	});
 
 	// Parse JSON from response (remove any markdown formatting if present)
@@ -296,9 +300,13 @@ export async function extractResumeData(
 	const resumeText = portfolioToResumeText(portfolio);
 
 	const { text } = await generateText({
-		model: openai("gpt-4o-mini"),
+		model: openai("gpt-5-mini"),
+		providerOptions: {
+			openai: {
+				reasoningEffort: "minimal",
+			} satisfies OpenAIResponsesProviderOptions,
+		},
 		prompt: RESUME_EXTRACTION_PROMPT(resumeText),
-		temperature: 0.1,
 	});
 
 	const cleanedText = text

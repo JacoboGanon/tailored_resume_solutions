@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { openai, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import type {
 	ATSRecommendation,
@@ -224,7 +224,12 @@ export async function optimizeResumeForATS(
 	);
 
 	const { text } = await generateText({
-		model: openai("gpt-4o"),
+		model: openai("gpt-5-mini"),
+		providerOptions: {
+			openai: {
+				reasoningEffort: "minimal",
+			} satisfies OpenAIResponsesProviderOptions,
+		},
 		prompt: ATS_RESUME_IMPROVEMENT_PROMPT(
 			atsRecommendations,
 			skillPriorityText,
@@ -234,7 +239,6 @@ export async function optimizeResumeForATS(
 			rawResume,
 			extractedResumeKeywords,
 		),
-		temperature: 0.3, // Moderate temperature for creative but controlled modifications
 	});
 
 	// Clean up the response (remove markdown code blocks if present)

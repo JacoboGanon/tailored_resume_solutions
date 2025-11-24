@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { type OpenAIResponsesProviderOptions, openai } from "@ai-sdk/openai";
 import { streamObject } from "ai";
 import { z } from "zod";
 import {
@@ -132,7 +132,12 @@ export async function matchJobToPortfolio(
 	const portfolioFormatted = formatPortfolioForAI(portfolio);
 
 	const result = await streamObject({
-		model: openai("gpt-4o-mini"),
+		model: openai("gpt-5-mini"),
+		providerOptions: {
+			openai: {
+				reasoningEffort: "minimal",
+			} satisfies OpenAIResponsesProviderOptions,
+		},
 		schema: jobMatchSchema,
 		system: JOB_MATCHING_SYSTEM_PROMPT,
 		prompt: JOB_MATCHING_USER_PROMPT(jobDescription, portfolioFormatted),
@@ -161,7 +166,12 @@ export async function generateImprovementSuggestions(
 	const selectedFormatted = JSON.stringify(selectedItemIds, null, 2);
 
 	const { object } = await streamObject({
-		model: openai("gpt-4o-mini"),
+		model: openai("gpt-5-mini"),
+		providerOptions: {
+			openai: {
+				reasoningEffort: "minimal",
+			} satisfies OpenAIResponsesProviderOptions,
+		},
 		schema: suggestionSchema,
 		prompt: IMPROVEMENT_SUGGESTIONS_PROMPT(
 			jobDescription,

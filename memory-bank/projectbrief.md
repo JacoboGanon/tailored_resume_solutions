@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-The Portfolio Resume System is an AI-powered web application that enables users to create, manage, and customize professional resumes tailored to specific job descriptions. The system leverages OpenAI's GPT-4o-mini model to intelligently match user portfolio items with job requirements, providing real-time recommendations and generating ATS-friendly PDF resumes.
+The Portfolio Resume System is an AI-powered web application that enables users to create, manage, and customize professional resumes tailored to specific job descriptions. The system leverages OpenAI's gpt-5-mini model to intelligently match user portfolio items with job requirements, providing real-time recommendations and generating ATS-friendly PDF resumes.
 
 ## Core Requirements
 

@@ -100,7 +100,7 @@
 
 #### AI Integration
 - **OpenAI API**
-  - GPT-4o-mini model for job matching
+  - gpt-5-mini model for job matching
   - Structured output generation
   - Streaming responses via AI SDK
 
@@ -301,10 +301,9 @@ export const GET = async () => {
 // Streaming with structured output
 const streamJobAnalysis = async (jobDescription: string, portfolio: Portfolio) => {
   return streamObject({
-    model: openai('gpt-4o-mini'),
+    model: openai('gpt-5-mini'),
     schema: jobMatchingSchema,
     prompt: formatOptimizedPrompt(jobDescription, portfolio),
-    temperature: 0.1, // Lower temperature for consistent results
     maxTokens: 2000, // Limit tokens for cost control
   });
 };

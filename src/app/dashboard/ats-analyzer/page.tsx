@@ -1,8 +1,13 @@
 "use client";
 
+import { experimental_useObject as useObject } from "@ai-sdk/react";
 import { Download, Wand2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import {
+	type OptimizedResume,
+	optimizedResumeSchema,
+} from "~/app/api/ats/optimize/utils";
 import { RecommendationsList } from "~/components/ats/recommendations-list";
 import { ResumeDiffViewer } from "~/components/ats/resume-diff-viewer";
 import { ScoreCard } from "~/components/ats/score-card";
@@ -22,6 +27,7 @@ import {
 	SelectValue,
 } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
+import { formatOptimizedResumeToMarkdown } from "~/lib/resume-formatter";
 import { api } from "~/trpc/react";
 
 export default function ATSAnalyzerPage() {
@@ -30,11 +36,9 @@ export default function ATSAnalyzerPage() {
 		null,
 	);
 	const [isAnalyzing, setIsAnalyzing] = useState(false);
-	const [isOptimizing, setIsOptimizing] = useState(false);
 	const [analysisProgress, setAnalysisProgress] = useState<string>("");
-	const [optimizationProgress, setOptimizationProgress] = useState<string>("");
-	const [streamingOptimizedResume, setStreamingOptimizedResume] =
-		useState<string>("");
+	const [shouldOptimize, setShouldOptimize] = useState(false);
+	const [isRefetchingOptimized, setIsRefetchingOptimized] = useState(false);
 
 	const { data: resumeHistory, isLoading: isLoadingHistory } =
 		api.resume.getResumeHistory.useQuery();
@@ -50,6 +54,12 @@ export default function ATSAnalyzerPage() {
 			{ resumeId: selectedResumeId ?? undefined },
 			{ enabled: !!selectedResumeId },
 		);
+
+	// Track the count of optimized resumes before optimization starts
+	const [
+		optimizedResumeCountBeforeOptimize,
+		setOptimizedResumeCountBeforeOptimize,
+	] = useState<number>(0);
 
 	// Filter out optimized resumes from the dropdown
 	const availableResumes = resumeHistory?.filter((resume) => {
@@ -69,6 +79,73 @@ export default function ATSAnalyzerPage() {
 	const { data: portfolio } = api.portfolio.getOrCreate.useQuery();
 
 	const utils = api.useUtils();
+
+	// Use useObject hook for streaming optimized resume
+	const {
+		object: streamingOptimizedResume,
+		submit: submitOptimize,
+		isLoading: isOptimizing,
+		error: optimizeError,
+	} = useObject({
+		api: "/api/ats/optimize",
+		schema: optimizedResumeSchema,
+		onFinish: async () => {
+			// Wait for refetch to complete and verify database save succeeded
+			setIsRefetchingOptimized(true);
+			try {
+				// Give the server-side onFinish callback time to complete the database save
+				// Retry up to 3 times with increasing delays
+				let newOptimizedResumes: typeof optimizedResumes | undefined;
+				let retries = 0;
+				const maxRetries = 3;
+				const baseDelay = 500; // Start with 500ms delay
+
+				while (retries <= maxRetries) {
+					// Wait a bit before refetching to allow server-side save to complete
+					if (retries > 0) {
+						await new Promise((resolve) =>
+							setTimeout(resolve, baseDelay * retries),
+						);
+					}
+
+					const result = await refetchOptimizedResumes();
+					newOptimizedResumes = result.data;
+					const newCount = newOptimizedResumes?.length ?? 0;
+
+					// If we found a new resume, success!
+					if (newCount > optimizedResumeCountBeforeOptimize) {
+						toast.success("Resume optimized successfully");
+						break;
+					}
+
+					// If this was the last retry, show error
+					if (retries === maxRetries) {
+						toast.error(
+							"Resume optimization completed but failed to save. Please try again.",
+						);
+						console.error(
+							"Optimization completed but no new resume found in database after retries",
+						);
+					}
+
+					retries++;
+				}
+			} catch (error) {
+				console.error("Error refetching optimized resumes:", error);
+				toast.error(
+					"Failed to verify optimized resume was saved. Please refresh the page.",
+				);
+			} finally {
+				setIsRefetchingOptimized(false);
+			}
+		},
+		onError: (error) => {
+			setIsRefetchingOptimized(false);
+			toast.error(
+				`Optimization failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+			);
+		},
+	});
 
 	const handleAnalyze = async () => {
 		if (!selectedResumeId) {
@@ -135,74 +212,20 @@ export default function ATSAnalyzerPage() {
 		}
 	};
 
-	const handleOptimize = async () => {
+	const handleOptimize = () => {
 		if (!selectedResumeId || !atsAnalysis) {
 			toast.error("Please run ATS analysis first");
 			return;
 		}
 
-		setIsOptimizing(true);
-		setOptimizationProgress("");
-		setStreamingOptimizedResume("");
+		// Store the current count before optimization starts
+		setOptimizedResumeCountBeforeOptimize(optimizedResumes?.length ?? 0);
 		setOptimizedResumeId(null);
-
-		try {
-			const response = await fetch("/api/ats/optimize", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					resumeId: selectedResumeId,
-					analysisId: atsAnalysis.id,
-				}),
-			});
-
-			if (!response.ok) {
-				throw new Error("Optimization failed");
-			}
-
-			const reader = response.body?.getReader();
-			const decoder = new TextDecoder();
-
-			if (!reader) {
-				throw new Error("No response body");
-			}
-
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-
-				const chunk = decoder.decode(value);
-				const lines = chunk.split("\n");
-
-				for (const line of lines) {
-					if (line.startsWith("data: ")) {
-						try {
-							const data = JSON.parse(line.slice(6));
-							if (data.type === "error") {
-								throw new Error(data.error);
-							} else if (data.type === "progress") {
-								setOptimizationProgress(data.message);
-							} else if (data.type === "complete") {
-								setOptimizedResumeId(data.modifiedResumeId);
-								setStreamingOptimizedResume(""); // Clear streaming content
-								toast.success("Resume optimized successfully");
-								void refetchOptimizedResumes();
-							}
-						} catch (_e) {
-							// Ignore JSON parse errors for incomplete chunks
-						}
-					}
-				}
-			}
-		} catch (error) {
-			toast.error(
-				`Optimization failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-			);
-		} finally {
-			setIsOptimizing(false);
-		}
+		setShouldOptimize(true);
+		submitOptimize({
+			resumeId: selectedResumeId,
+			analysisId: atsAnalysis.id,
+		});
 	};
 
 	const handleDownloadOptimized = async () => {
@@ -263,6 +286,24 @@ export default function ATSAnalyzerPage() {
 			setOptimizedResumeId(latestOptimizedResume.id);
 		}
 	}, [latestOptimizedResume, optimizedResumeId, isOptimizing]);
+
+	// Reset shouldOptimize when optimization completes and refetch is done
+	useEffect(() => {
+		if (
+			!isOptimizing &&
+			!isRefetchingOptimized &&
+			shouldOptimize &&
+			latestOptimizedResume
+		) {
+			setOptimizedResumeId(latestOptimizedResume.id);
+			setShouldOptimize(false);
+		}
+	}, [
+		isOptimizing,
+		isRefetchingOptimized,
+		shouldOptimize,
+		latestOptimizedResume,
+	]);
 
 	// Generate resume markdown from selected items
 	const generateResumeMarkdown = () => {
@@ -414,7 +455,7 @@ export default function ATSAnalyzerPage() {
 							onValueChange={(value) => {
 								setSelectedResumeId(value || null);
 								setOptimizedResumeId(null);
-								setStreamingOptimizedResume("");
+								setShouldOptimize(false);
 							}}
 							value={selectedResumeId ?? ""}
 						>
@@ -514,9 +555,14 @@ export default function ATSAnalyzerPage() {
 										<Wand2 className="mr-2 h-4 w-4" />
 										{isOptimizing ? "Optimizing..." : "Optimize Resume for Me"}
 									</Button>
-									{optimizationProgress && (
+									{isOptimizing && (
 										<p className="text-muted-foreground text-sm">
-											{optimizationProgress}
+											Generating optimized resume...
+										</p>
+									)}
+									{optimizeError && (
+										<p className="text-destructive text-sm">
+											{optimizeError.message}
 										</p>
 									)}
 									{(optimizedResumeId || latestOptimizedResume) && (
@@ -535,25 +581,38 @@ export default function ATSAnalyzerPage() {
 					)}
 
 					{(latestOptimizedResume ||
-						(isOptimizing && streamingOptimizedResume)) && (
+						(isOptimizing && streamingOptimizedResume) ||
+						streamingOptimizedResume ||
+						isRefetchingOptimized) && (
 						<ResumeDiffViewer
 							modifications={
-								(latestOptimizedResume?.modifications as Array<{
-									section: string;
-									change: string;
-									reason: string;
-								}>) || []
+								// Only use modifications from database if not streaming and refetch is complete
+								!isOptimizing && !isRefetchingOptimized && latestOptimizedResume
+									? (latestOptimizedResume.modifications as Array<{
+											section: string;
+											change: string;
+											reason: string;
+										}>) || []
+									: []
 							}
 							optimizedResume={
-								streamingOptimizedResume ||
-								(
-									latestOptimizedResume?.modifiedContent as {
-										markdown: string;
-									}
-								)?.markdown ||
-								""
+								streamingOptimizedResume
+									? formatOptimizedResumeToMarkdown(
+											streamingOptimizedResume as Partial<OptimizedResume>,
+										)
+									: (
+											latestOptimizedResume?.modifiedContent as {
+												markdown: string;
+											}
+										)?.markdown || ""
+							}
+							optimizedResumeObject={
+								streamingOptimizedResume
+									? (streamingOptimizedResume as Partial<OptimizedResume>)
+									: null
 							}
 							originalResume={generateResumeMarkdown()}
+							isStreaming={isOptimizing || isRefetchingOptimized}
 						/>
 					)}
 				</>

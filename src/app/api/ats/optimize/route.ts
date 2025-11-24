@@ -1,6 +1,5 @@
-import { openai } from "@ai-sdk/openai";
+import { type OpenAIResponsesProviderOptions, openai } from "@ai-sdk/openai";
 import { streamObject } from "ai";
-import { z } from "zod";
 import {
 	calculateATSScore,
 	extractJobPosting,
@@ -9,132 +8,13 @@ import {
 } from "~/server/ai/ats-extraction";
 import { getSession } from "~/server/better-auth/server";
 import { db } from "~/server/db";
+import { optimizedResumeSchema } from "./utils";
 
 export const maxDuration = 60; // Optimization can take longer
 
 /**
  * Zod schema for optimized resume structured output
  */
-const optimizedResumeSchema = z.object({
-	contactInfo: z.object({
-		name: z.string().describe("Full name of the candidate"),
-		email: z.string().email().optional().nullable().describe("Email address"),
-		phone: z.string().optional().nullable().describe("Phone number"),
-		linkedin: z
-			.string()
-			.url()
-			.optional()
-			.nullable()
-			.describe("LinkedIn profile URL"),
-		github: z
-			.string()
-			.url()
-			.optional()
-			.nullable()
-			.describe("GitHub profile URL"),
-		website: z
-			.string()
-			.url()
-			.optional()
-			.nullable()
-			.describe("Personal website URL"),
-	}),
-	professionalSummary: z
-		.string()
-		.optional()
-		.nullable()
-		.describe(
-			"2-3 sentence professional summary highlighting key qualifications",
-		),
-	workExperiences: z
-		.array(
-			z.object({
-				jobTitle: z.string().describe("Job title"),
-				company: z.string().describe("Company name"),
-				location: z.string().optional().nullable().describe("Job location"),
-				startDate: z
-					.string()
-					.describe("Start date in format 'YYYY-MM-DD' or 'Present'"),
-				endDate: z
-					.string()
-					.optional()
-					.nullable()
-					.describe("End date in format 'YYYY-MM-DD' or 'Present'"),
-				isCurrent: z.boolean().describe("Whether this is the current position"),
-				bulletPoints: z
-					.array(z.string())
-					.describe("Array of achievement bullet points"),
-			}),
-		)
-		.describe("Work experience entries"),
-	educations: z
-		.array(
-			z.object({
-				institution: z.string().describe("Educational institution name"),
-				degree: z.string().describe("Degree type (e.g., Bachelor of Science)"),
-				fieldOfStudy: z.string().describe("Field of study or major"),
-				gpa: z.string().optional().nullable().describe("GPA if above 3.5"),
-				startDate: z.string().describe("Start date in format 'YYYY-MM-DD'"),
-				endDate: z
-					.string()
-					.optional()
-					.nullable()
-					.describe("End date in format 'YYYY-MM-DD' or 'Present'"),
-				isCurrent: z.boolean().describe("Whether currently enrolled"),
-			}),
-		)
-		.describe("Education entries"),
-	skills: z
-		.array(
-			z.object({
-				name: z.string().describe("Skill name"),
-				category: z.string().optional().nullable().describe("Skill category"),
-			}),
-		)
-		.describe("Skills list"),
-	projects: z
-		.array(
-			z.object({
-				name: z.string().describe("Project name"),
-				description: z
-					.string()
-					.optional()
-					.nullable()
-					.describe("Project description"),
-				bulletPoints: z
-					.array(z.string())
-					.describe("Array of project highlight bullet points"),
-				technologies: z
-					.array(z.string())
-					.describe("Technologies used in the project"),
-				url: z
-					.string()
-					.url()
-					.optional()
-					.nullable()
-					.describe("Project URL if available"),
-			}),
-		)
-		.optional()
-		.describe("Projects list"),
-	achievements: z
-		.array(
-			z.object({
-				title: z.string().describe("Achievement title"),
-				description: z.string().describe("Achievement description"),
-				category: z.string().describe("Achievement category"),
-				date: z
-					.string()
-					.optional()
-					.nullable()
-					.describe("Date in format 'YYYY-MM-DD' if available"),
-			}),
-		)
-		.optional()
-		.describe("Achievements list"),
-});
-
-type OptimizedResume = z.infer<typeof optimizedResumeSchema>;
 
 /**
  * Convert portfolio to markdown resume format for AI context
@@ -502,132 +382,108 @@ export async function POST(req: Request) {
 			return new Response("Portfolio not found", { status: 404 });
 		}
 
-		// Create a readable stream for progress updates and content
-		const encoder = new TextEncoder();
-		const stream = new ReadableStream({
-			async start(controller) {
-				const sendProgress = (message: string) => {
-					controller.enqueue(
-						encoder.encode(
-							`data: ${JSON.stringify({ type: "progress", message })}\n\n`,
-						),
+		// Get or create analysis
+		let analysis = analysisId
+			? await db.aTSAnalysis.findUnique({
+					where: { id: analysisId },
+				})
+			: await db.aTSAnalysis.findFirst({
+					where: { resumeId: resume.id },
+					orderBy: { createdAt: "desc" },
+				});
+
+		if (!analysis) {
+			if (!resume.user.portfolio) {
+				return new Response("Portfolio not found", { status: 404 });
+			}
+			const extractedJob = await extractJobPosting(resume.jobDescription);
+			const extractedResume = await extractResumeData(resume.user.portfolio);
+			const scores = await calculateATSScore(extractedJob, extractedResume);
+			const { recommendations, priorityKeywords, missingSkills } =
+				await generateATSRecommendations(extractedJob, extractedResume, scores);
+
+			analysis = await db.aTSAnalysis.create({
+				data: {
+					resumeId: resume.id,
+					extractedJob: JSON.parse(JSON.stringify(extractedJob)),
+					extractedResume: JSON.parse(JSON.stringify(extractedResume)),
+					overallScore: scores.overallScore,
+					cosineSimilarity: scores.cosineSimilarity,
+					keywordMatchPercent: scores.keywordMatchPercent,
+					skillOverlapPercent: scores.skillOverlapPercent,
+					experienceRelevance: scores.experienceRelevance,
+					recommendations: JSON.parse(JSON.stringify(recommendations)),
+					priorityKeywords,
+					missingSkills,
+				},
+			});
+		}
+
+		// Get extracted data
+		const extractedJob = analysis.extractedJob as unknown as Awaited<
+			ReturnType<typeof extractJobPosting>
+		>;
+		const extractedResume = analysis.extractedResume as unknown as Awaited<
+			ReturnType<typeof extractResumeData>
+		>;
+		const recommendations = analysis.recommendations as unknown as Array<{
+			category: string;
+			suggestion: string;
+			priority: "high" | "medium" | "low";
+		}>;
+
+		const scores = {
+			overallScore: analysis.overallScore,
+			cosineSimilarity: analysis.cosineSimilarity,
+			keywordMatchPercent: analysis.keywordMatchPercent,
+			skillOverlapPercent: analysis.skillOverlapPercent,
+			experienceRelevance: analysis.experienceRelevance,
+		};
+
+		// Prepare optimization data
+		if (!resume.user.portfolio) {
+			return new Response("Portfolio not found", { status: 404 });
+		}
+		const rawResume = portfolioToMarkdown(resume.user.portfolio);
+		const extractedJobKeywords = extractedJob.extractedKeywords.join(", ");
+		const extractedResumeKeywords =
+			extractedResume["Extracted Keywords"].join(", ");
+		const atsRecommendations = formatRecommendations(recommendations);
+		const skillPriorityText = formatSkillPriority(
+			analysis.priorityKeywords,
+			analysis.missingSkills,
+		);
+
+		// Stream the optimization with structured output
+		const result = streamObject({
+			model: openai("gpt-5-mini"),
+			providerOptions: {
+				openai: {
+					reasoningEffort: "minimal",
+				} satisfies OpenAIResponsesProviderOptions,
+			},
+			schema: optimizedResumeSchema,
+			prompt: createStructuredOptimizationPrompt(
+				atsRecommendations,
+				skillPriorityText,
+				scores.cosineSimilarity,
+				resume.jobDescription,
+				extractedJobKeywords,
+				rawResume,
+				extractedResumeKeywords,
+			),
+			onFinish: async ({ object: optimizedResume }) => {
+				// Save to database when streaming completes
+				// Note: This runs asynchronously after the stream is sent to the client.
+				// The client should verify the save succeeded by checking if a new resume exists.
+				if (!optimizedResume) {
+					console.error(
+						"[ATS Optimize] Failed to generate optimized resume - object is null",
 					);
-				};
+					return;
+				}
 
 				try {
-					// Get or create analysis
-					let analysis = analysisId
-						? await db.aTSAnalysis.findUnique({
-								where: { id: analysisId },
-							})
-						: await db.aTSAnalysis.findFirst({
-								where: { resumeId: resume.id },
-								orderBy: { createdAt: "desc" },
-							});
-
-					if (!analysis) {
-						if (!resume.user.portfolio) {
-							throw new Error("Portfolio not found");
-						}
-						sendProgress("Running ATS analysis first...");
-						const extractedJob = await extractJobPosting(resume.jobDescription);
-						const extractedResume = await extractResumeData(
-							resume.user.portfolio,
-						);
-						const scores = await calculateATSScore(
-							extractedJob,
-							extractedResume,
-						);
-						const { recommendations, priorityKeywords, missingSkills } =
-							await generateATSRecommendations(
-								extractedJob,
-								extractedResume,
-								scores,
-							);
-
-						analysis = await db.aTSAnalysis.create({
-							data: {
-								resumeId: resume.id,
-								extractedJob: JSON.parse(JSON.stringify(extractedJob)),
-								extractedResume: JSON.parse(JSON.stringify(extractedResume)),
-								overallScore: scores.overallScore,
-								cosineSimilarity: scores.cosineSimilarity,
-								keywordMatchPercent: scores.keywordMatchPercent,
-								skillOverlapPercent: scores.skillOverlapPercent,
-								experienceRelevance: scores.experienceRelevance,
-								recommendations: JSON.parse(JSON.stringify(recommendations)),
-								priorityKeywords,
-								missingSkills,
-							},
-						});
-					}
-
-					// Get extracted data
-					const extractedJob = analysis.extractedJob as unknown as Awaited<
-						ReturnType<typeof extractJobPosting>
-					>;
-					const extractedResume =
-						analysis.extractedResume as unknown as Awaited<
-							ReturnType<typeof extractResumeData>
-						>;
-					const recommendations = analysis.recommendations as unknown as Array<{
-						category: string;
-						suggestion: string;
-						priority: "high" | "medium" | "low";
-					}>;
-
-					const scores = {
-						overallScore: analysis.overallScore,
-						cosineSimilarity: analysis.cosineSimilarity,
-						keywordMatchPercent: analysis.keywordMatchPercent,
-						skillOverlapPercent: analysis.skillOverlapPercent,
-						experienceRelevance: analysis.experienceRelevance,
-					};
-
-					// Prepare optimization data
-					sendProgress("Preparing optimization...");
-					if (!resume.user.portfolio) {
-						throw new Error("Portfolio not found");
-					}
-					const rawResume = portfolioToMarkdown(resume.user.portfolio);
-					const extractedJobKeywords =
-						extractedJob.extractedKeywords.join(", ");
-					const extractedResumeKeywords =
-						extractedResume["Extracted Keywords"].join(", ");
-					const atsRecommendations = formatRecommendations(recommendations);
-					const skillPriorityText = formatSkillPriority(
-						analysis.priorityKeywords,
-						analysis.missingSkills,
-					);
-
-					// Stream the optimization with structured output
-					sendProgress("Generating optimized resume...");
-					const result = streamObject({
-						model: openai("gpt-4o"),
-						schema: optimizedResumeSchema,
-						prompt: createStructuredOptimizationPrompt(
-							atsRecommendations,
-							skillPriorityText,
-							scores.cosineSimilarity,
-							resume.jobDescription,
-							extractedJobKeywords,
-							rawResume,
-							extractedResumeKeywords,
-						),
-						temperature: 0.3,
-					});
-
-					// Wait for the final complete object
-					let optimizedResume: OptimizedResume | null = null;
-
-					// Get the final complete object (don't stream partial updates)
-					const finalResult = await result.object;
-					optimizedResume = finalResult;
-
-					if (!optimizedResume) {
-						throw new Error("Failed to generate optimized resume");
-					}
-
 					// Generate modifications log
 					const modifications: Array<{
 						section: string;
@@ -644,8 +500,7 @@ export async function POST(req: Request) {
 					}
 
 					// Save modified resume to database with structured data
-					sendProgress("Saving optimized resume...");
-					const modifiedResume = await db.modifiedResume.create({
+					const savedResume = await db.modifiedResume.create({
 						data: {
 							originalResumeId: resume.id,
 							name: `${resume.name} - Optimized`,
@@ -714,32 +569,28 @@ export async function POST(req: Request) {
 						},
 					});
 
-					// Send completion with the modified resume ID
-					controller.enqueue(
-						encoder.encode(
-							`data: ${JSON.stringify({ type: "complete", modifiedResumeId: modifiedResume.id })}\n\n`,
-						),
+					console.log(
+						`[ATS Optimize] Successfully saved optimized resume with ID: ${savedResume.id}`,
 					);
-					controller.close();
 				} catch (error) {
-					console.error("Error in ATS optimization:", error);
-					controller.enqueue(
-						encoder.encode(
-							`data: ${JSON.stringify({ type: "error", error: String(error) })}\n\n`,
-						),
+					// Log error with full context for debugging
+					console.error(
+						"[ATS Optimize] Error saving optimized resume to database:",
+						{
+							error: error instanceof Error ? error.message : String(error),
+							stack: error instanceof Error ? error.stack : undefined,
+							resumeId,
+							analysisId,
+						},
 					);
-					controller.close();
+					// Note: We can't communicate this error back to the client through the stream
+					// as the stream has already completed. The client will detect the failure
+					// by checking if a new resume was created in the database.
 				}
 			},
 		});
 
-		return new Response(stream, {
-			headers: {
-				"Content-Type": "text/event-stream",
-				"Cache-Control": "no-cache",
-				Connection: "keep-alive",
-			},
-		});
+		return result.toTextStreamResponse();
 	} catch (error) {
 		console.error("Error in ATS optimize route:", error);
 		return new Response("Internal server error", { status: 500 });

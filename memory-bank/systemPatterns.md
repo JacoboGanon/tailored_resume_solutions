@@ -33,7 +33,7 @@
           ▼                     ▼
 ┌──────────────────┐   ┌────────────────────┐
 │  Database Layer  │   │   External APIs    │
-│  PostgreSQL      │   │  - OpenAI GPT-4o   │
+│  PostgreSQL      │   │  - OpenAI gpt-5-mini│
 │  Prisma ORM      │   │  - GitHub OAuth    │
 │                  │   │  - Email Service  │
 └──────────────────┘   └────────────────────┘
@@ -122,7 +122,7 @@ export async function POST(req: Request) {
   const { jobDescription, portfolio } = await req.json();
   
   const result = streamObject({
-    model: openai('gpt-4o-mini'),
+    model: openai('gpt-5-mini'),
     schema: jobMatchingSchema,
     prompt: formatJobMatchingPrompt(jobDescription, portfolio),
     onFinish: ({ object }) => {

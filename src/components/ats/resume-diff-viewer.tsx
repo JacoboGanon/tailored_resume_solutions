@@ -1,6 +1,8 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import type { OptimizedResume } from "~/app/api/ats/optimize/utils";
 import {
 	Card,
 	CardContent,
@@ -8,32 +10,51 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
+import { Skeleton } from "~/components/ui/skeleton";
+import { formatOptimizedResumeToMarkdown } from "~/lib/resume-formatter";
 
 interface ResumeDiffViewerProps {
 	originalResume: string;
 	optimizedResume: string;
+	optimizedResumeObject?: Partial<OptimizedResume> | null;
 	modifications?: Array<{
 		section: string;
 		change: string;
 		reason: string;
 	}>;
+	isStreaming?: boolean;
 }
 
 export function ResumeDiffViewer({
 	originalResume,
 	optimizedResume,
+	optimizedResumeObject,
 	modifications = [],
+	isStreaming = false,
 }: ResumeDiffViewerProps) {
 	const [activeTab, setActiveTab] = useState<
 		"side-by-side" | "optimized" | "changes"
 	>("side-by-side");
 
+	// Use structured object if available, otherwise use markdown string
+	const displayResume =
+		optimizedResumeObject && Object.keys(optimizedResumeObject).length > 0
+			? formatOptimizedResumeToMarkdown(optimizedResumeObject)
+			: optimizedResume;
+
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Resume Comparison</CardTitle>
+				<CardTitle className="flex items-center gap-2">
+					Resume Comparison
+					{isStreaming && (
+						<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+					)}
+				</CardTitle>
 				<CardDescription>
-					Compare your original resume with the optimized version
+					{isStreaming
+						? "Optimized resume is being generated..."
+						: "Compare your original resume with the optimized version"}
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
@@ -84,11 +105,26 @@ export function ResumeDiffViewer({
 							</div>
 						</div>
 						<div className="space-y-2">
-							<h3 className="font-semibold text-sm">Optimized Resume</h3>
+							<h3 className="flex items-center gap-2 font-semibold text-sm">
+								Optimized Resume
+								{isStreaming && (
+									<span className="text-muted-foreground text-xs">
+										(Streaming...)
+									</span>
+								)}
+							</h3>
 							<div className="rounded-lg border bg-muted/50 p-4">
-								<pre className="whitespace-pre-wrap text-sm">
-									{optimizedResume}
-								</pre>
+								{isStreaming && !displayResume ? (
+									<div className="space-y-2">
+										<Skeleton className="h-4 w-full" />
+										<Skeleton className="h-4 w-3/4" />
+										<Skeleton className="h-4 w-full" />
+									</div>
+								) : (
+									<pre className="whitespace-pre-wrap text-sm">
+										{displayResume || "Generating..."}
+									</pre>
+								)}
 							</div>
 						</div>
 					</div>
@@ -96,7 +132,18 @@ export function ResumeDiffViewer({
 
 				{activeTab === "optimized" && (
 					<div className="rounded-lg border bg-muted/50 p-4">
-						<pre className="whitespace-pre-wrap text-sm">{optimizedResume}</pre>
+						{isStreaming && !displayResume ? (
+							<div className="space-y-2">
+								<Skeleton className="h-4 w-full" />
+								<Skeleton className="h-4 w-3/4" />
+								<Skeleton className="h-4 w-full" />
+								<Skeleton className="h-4 w-5/6" />
+							</div>
+						) : (
+							<pre className="whitespace-pre-wrap text-sm">
+								{displayResume || "Generating..."}
+							</pre>
+						)}
 					</div>
 				)}
 

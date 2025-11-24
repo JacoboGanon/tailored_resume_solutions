@@ -173,7 +173,7 @@ const [analysisState, setAnalysisState] = useState<'idle' | 'analyzing' | 'compl
 ### Active Technical Decisions
 
 #### 1. AI Model Selection
-**Current Choice**: OpenAI GPT-4o-mini
+**Current Choice**: OpenAI gpt-5-mini
 **Rationale**:
 - Good balance of performance and cost
 - Structured output support

@@ -36,7 +36,7 @@ The Portfolio Resume System is a full-featured web application that allows users
           ▼                     ▼
 ┌──────────────────┐   ┌────────────────────┐
 │  Database Layer  │   │   External APIs    │
-│  (SQLite/Prisma) │   │  - OpenAI GPT-4o   │
+│  (SQLite/Prisma) │   │  - OpenAI gpt-5-mini│
 │                  │   │  - Better Auth     │
 └──────────────────┘   └────────────────────┘
 ```
@@ -121,7 +121,7 @@ Browser Triggers Download
 
 ### Overview
 
-The AI matching system uses OpenAI's GPT-4o-mini model with structured output (via AI SDK's `streamObject`) to analyze job descriptions and select relevant portfolio items.
+The AI matching system uses OpenAI's gpt-5-mini model with structured output (via AI SDK's `streamObject`) to analyze job descriptions and select relevant portfolio items.
 
 ### Process
 
