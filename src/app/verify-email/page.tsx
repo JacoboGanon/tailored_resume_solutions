@@ -1,9 +1,9 @@
 "use client";
 
-import { FileText, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, FileText, Loader2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
 	Card,
@@ -13,9 +13,8 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
-import { authClient } from "~/server/better-auth/client";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const token = searchParams.get("token");
@@ -56,7 +55,7 @@ export default function VerifyEmailPage() {
 				}
 
 				setStatus("success");
-			} catch (error) {
+			} catch (_error) {
 				setErrorMessage("An unexpected error occurred");
 				setStatus("error");
 			}
@@ -118,24 +117,21 @@ export default function VerifyEmailPage() {
 				</CardContent>
 				<CardFooter className="flex flex-col gap-4">
 					{status === "success" && (
-						<Button
-							className="w-full"
-							onClick={() => router.push("/sign-in")}
-						>
+						<Button className="w-full" onClick={() => router.push("/sign-in")}>
 							Go to Sign In
 						</Button>
 					)}
 					{status === "error" && (
 						<Button
 							className="w-full"
-							variant="outline"
 							onClick={() => router.push("/sign-up")}
+							variant="outline"
 						>
 							Back to Sign Up
 						</Button>
 					)}
 					<Link
-						className="text-center text-muted-foreground underline-offset-4 hover:underline text-sm"
+						className="text-center text-muted-foreground text-sm underline-offset-4 hover:underline"
 						href="/"
 					>
 						Back to home
@@ -146,3 +142,33 @@ export default function VerifyEmailPage() {
 	);
 }
 
+export default function VerifyEmailPage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="flex min-h-screen flex-col items-center justify-center bg-linear-to-b from-background to-muted/30 px-4">
+					<Link className="mb-8 flex items-center gap-2" href="/">
+						<FileText className="size-8 text-primary" />
+						<span className="font-bold text-2xl">ResumeAI</span>
+					</Link>
+					<Card className="w-full max-w-md">
+						<CardHeader className="text-center">
+							<CardTitle className="text-2xl">Email Verification</CardTitle>
+							<CardDescription>Loading...</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<div className="flex flex-col items-center justify-center py-8">
+								<Loader2 className="size-12 animate-spin text-primary" />
+								<p className="mt-4 text-muted-foreground text-sm">
+									Please wait...
+								</p>
+							</div>
+						</CardContent>
+					</Card>
+				</div>
+			}
+		>
+			<VerifyEmailContent />
+		</Suspense>
+	);
+}

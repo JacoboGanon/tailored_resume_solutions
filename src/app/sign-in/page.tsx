@@ -91,13 +91,11 @@ export default function SignInPage() {
 				</CardHeader>
 				<CardContent className="space-y-4">
 					{error && (
-						<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm space-y-2">
+						<div className="space-y-2 rounded-md bg-destructive/10 p-3 text-destructive text-sm">
 							<p>{error}</p>
 							{error.toLowerCase().includes("verify") && (
 								<Button
-									className="w-full mt-2"
-									variant="outline"
-									size="sm"
+									className="mt-2 w-full"
 									onClick={async () => {
 										try {
 											await authClient.sendVerificationEmail({
@@ -114,6 +112,8 @@ export default function SignInPage() {
 											);
 										}
 									}}
+									size="sm"
+									variant="outline"
 								>
 									Resend Verification Email
 								</Button>
@@ -121,7 +121,7 @@ export default function SignInPage() {
 						</div>
 					)}
 					{successMessage && (
-						<div className="rounded-md bg-green-500/10 p-3 text-green-700 dark:text-green-400 text-sm">
+						<div className="rounded-md bg-green-500/10 p-3 text-green-700 text-sm dark:text-green-400">
 							{successMessage}
 						</div>
 					)}

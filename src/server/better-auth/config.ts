@@ -21,12 +21,12 @@ export const auth = betterAuth({
 		requireEmailVerification: true,
 	},
 	emailVerification: {
-		sendVerificationEmail: async ({ user, url, token }) => {
+		sendVerificationEmail: async ({ user, url: _url, token: _token }) => {
 			// Better Auth provides the verification URL, but we want to redirect to our custom page
 			// So we construct our own URL that will handle the verification
 			const baseUrl = getBaseUrl();
 			// The verification URL should point to our verify-email page with the token
-			const verificationUrl = `${baseUrl}/verify-email?token=${token}`;
+			const verificationUrl = `${baseUrl}/verify-email?token=${_token}`;
 
 			const emailTemplate = getEmailVerificationTemplate({
 				verificationUrl,

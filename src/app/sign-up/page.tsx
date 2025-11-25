@@ -2,7 +2,6 @@
 
 import { FileText, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
@@ -18,7 +17,6 @@ import { Label } from "~/components/ui/label";
 import { authClient } from "~/server/better-auth/client";
 
 export default function SignUpPage() {
-	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(false);
 	const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -106,14 +104,14 @@ export default function SignUpPage() {
 					)}
 
 					{showSuccessMessage && (
-						<div className="rounded-md bg-green-500/10 p-4 text-green-700 dark:text-green-400 text-sm space-y-2">
+						<div className="space-y-2 rounded-md bg-green-500/10 p-4 text-green-700 text-sm dark:text-green-400">
 							<p className="font-semibold">Check your email!</p>
 							<p>
 								We&apos;ve sent a verification link to <strong>{email}</strong>.
 								Please click the link in the email to verify your account before
 								signing in.
 							</p>
-							<p className="text-xs text-muted-foreground">
+							<p className="text-muted-foreground text-xs">
 								Didn&apos;t receive the email? Check your spam folder or try
 								signing up again.
 							</p>
@@ -196,12 +194,12 @@ export default function SignUpPage() {
 								<Input
 									disabled={isLoading}
 									id="password"
+									minLength={8}
 									onChange={(e) => setPassword(e.target.value)}
 									placeholder="Enter your password (min. 8 characters)"
 									required
 									type="password"
 									value={password}
-									minLength={8}
 								/>
 							</div>
 							<div className="space-y-2">
@@ -209,18 +207,16 @@ export default function SignUpPage() {
 								<Input
 									disabled={isLoading}
 									id="confirmPassword"
+									minLength={8}
 									onChange={(e) => setConfirmPassword(e.target.value)}
 									placeholder="Confirm your password"
 									required
 									type="password"
 									value={confirmPassword}
-									minLength={8}
 								/>
 							</div>
 							<Button className="w-full" disabled={isLoading} type="submit">
-								{isLoading && (
-									<Loader2 className="mr-2 size-4 animate-spin" />
-								)}
+								{isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
 								Sign Up
 							</Button>
 						</form>
@@ -247,4 +243,3 @@ export default function SignUpPage() {
 		</div>
 	);
 }
-
