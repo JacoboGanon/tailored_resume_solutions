@@ -18,7 +18,7 @@ export const auth = betterAuth({
 		autoSignInAfterVerification: true,
 		sendVerificationEmail: async ({ user, url }) => {
 			await resend.emails.send({
-				from: "ResumeAI <onboarding@resend.dev>", // Update with your verified domain
+				from: "Tailored Resume Services <onboarding@tailored-rs.com>",
 				to: user.email,
 				subject: "Verify your email address",
 				html: `
