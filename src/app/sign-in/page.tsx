@@ -22,6 +22,7 @@ export default function SignInPage() {
 	const [isLoading, setIsLoading] = useState(false);
 	const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [successMessage, setSuccessMessage] = useState<string | null>(null);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 
@@ -29,6 +30,7 @@ export default function SignInPage() {
 		e.preventDefault();
 		setIsLoading(true);
 		setError(null);
+		setSuccessMessage(null);
 
 		try {
 			const result = await authClient.signIn.email({
@@ -37,7 +39,18 @@ export default function SignInPage() {
 			});
 
 			if (result.error) {
-				setError(result.error.message ?? "Failed to sign in");
+				// Check if error is related to unverified email
+				const errorMessage = result.error.message ?? "Failed to sign in";
+				if (
+					errorMessage.toLowerCase().includes("email") &&
+					errorMessage.toLowerCase().includes("verify")
+				) {
+					setError(
+						"Please verify your email address before signing in. Check your inbox for the verification link.",
+					);
+				} else {
+					setError(errorMessage);
+				}
 			} else {
 				router.push("/dashboard");
 			}
@@ -78,8 +91,38 @@ export default function SignInPage() {
 				</CardHeader>
 				<CardContent className="space-y-4">
 					{error && (
-						<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
-							{error}
+						<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm space-y-2">
+							<p>{error}</p>
+							{error.toLowerCase().includes("verify") && (
+								<Button
+									className="w-full mt-2"
+									variant="outline"
+									size="sm"
+									onClick={async () => {
+										try {
+											await authClient.sendVerificationEmail({
+												email,
+												callbackURL: "/verify-email",
+											});
+											setError(null);
+											setSuccessMessage(
+												"Verification email sent! Please check your inbox.",
+											);
+										} catch {
+											setError(
+												"Failed to resend verification email. Please try again.",
+											);
+										}
+									}}
+								>
+									Resend Verification Email
+								</Button>
+							)}
+						</div>
+					)}
+					{successMessage && (
+						<div className="rounded-md bg-green-500/10 p-3 text-green-700 dark:text-green-400 text-sm">
+							{successMessage}
 						</div>
 					)}
 

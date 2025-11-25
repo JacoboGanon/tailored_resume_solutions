@@ -24,25 +24,42 @@ export default function SignUpPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
 	const [name, setName] = useState("");
+	const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
 	const handleEmailSignUp = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setIsLoading(true);
 		setError(null);
 
+		// Validate password confirmation
+		if (password !== confirmPassword) {
+			setError("Passwords do not match");
+			setIsLoading(false);
+			return;
+		}
+
+		// Validate password length (Better Auth requires minimum 8 characters)
+		if (password.length < 8) {
+			setError("Password must be at least 8 characters long");
+			setIsLoading(false);
+			return;
+		}
+
 		try {
 			const result = await authClient.signUp.email({
 				email,
 				password,
 				name,
-				callbackURL: "/dashboard",
+				callbackURL: "/verify-email",
 			});
 
 			if (result.error) {
 				setError(result.error.message ?? "Failed to sign up");
 			} else {
-				router.push("/dashboard");
+				// Show success message instead of redirecting
+				setShowSuccessMessage(true);
 			}
 		} catch {
 			setError("An unexpected error occurred");
@@ -85,6 +102,21 @@ export default function SignUpPage() {
 					{error && (
 						<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
 							{error}
+						</div>
+					)}
+
+					{showSuccessMessage && (
+						<div className="rounded-md bg-green-500/10 p-4 text-green-700 dark:text-green-400 text-sm space-y-2">
+							<p className="font-semibold">Check your email!</p>
+							<p>
+								We&apos;ve sent a verification link to <strong>{email}</strong>.
+								Please click the link in the email to verify your account before
+								signing in.
+							</p>
+							<p className="text-xs text-muted-foreground">
+								Didn&apos;t receive the email? Check your spam folder or try
+								signing up again.
+							</p>
 						</div>
 					)}
 
@@ -133,48 +165,66 @@ export default function SignUpPage() {
 					</div>
 
 					{/* Email Sign Up Form */}
-					<form className="space-y-4" onSubmit={handleEmailSignUp}>
-						<div className="space-y-2">
-							<Label htmlFor="name">Name</Label>
-							<Input
-								disabled={isLoading}
-								id="name"
-								onChange={(e) => setName(e.target.value)}
-								placeholder="John Doe"
-								required
-								type="text"
-								value={name}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="email">Email</Label>
-							<Input
-								disabled={isLoading}
-								id="email"
-								onChange={(e) => setEmail(e.target.value)}
-								placeholder="name@example.com"
-								required
-								type="email"
-								value={email}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="password">Password</Label>
-							<Input
-								disabled={isLoading}
-								id="password"
-								onChange={(e) => setPassword(e.target.value)}
-								placeholder="Enter your password"
-								required
-								type="password"
-								value={password}
-							/>
-						</div>
-						<Button className="w-full" disabled={isLoading} type="submit">
-							{isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
-							Sign Up
-						</Button>
-					</form>
+					{!showSuccessMessage && (
+						<form className="space-y-4" onSubmit={handleEmailSignUp}>
+							<div className="space-y-2">
+								<Label htmlFor="name">Name</Label>
+								<Input
+									disabled={isLoading}
+									id="name"
+									onChange={(e) => setName(e.target.value)}
+									placeholder="John Doe"
+									required
+									type="text"
+									value={name}
+								/>
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="email">Email</Label>
+								<Input
+									disabled={isLoading}
+									id="email"
+									onChange={(e) => setEmail(e.target.value)}
+									placeholder="name@example.com"
+									required
+									type="email"
+									value={email}
+								/>
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="password">Password</Label>
+								<Input
+									disabled={isLoading}
+									id="password"
+									onChange={(e) => setPassword(e.target.value)}
+									placeholder="Enter your password (min. 8 characters)"
+									required
+									type="password"
+									value={password}
+									minLength={8}
+								/>
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="confirmPassword">Confirm Password</Label>
+								<Input
+									disabled={isLoading}
+									id="confirmPassword"
+									onChange={(e) => setConfirmPassword(e.target.value)}
+									placeholder="Confirm your password"
+									required
+									type="password"
+									value={confirmPassword}
+									minLength={8}
+								/>
+							</div>
+							<Button className="w-full" disabled={isLoading} type="submit">
+								{isLoading && (
+									<Loader2 className="mr-2 size-4 animate-spin" />
+								)}
+								Sign Up
+							</Button>
+						</form>
+					)}
 				</CardContent>
 				<CardFooter className="flex flex-col gap-4 text-center text-muted-foreground text-sm">
 					<div>
