@@ -100,7 +100,7 @@ export default function SignInPage() {
 										try {
 											await authClient.sendVerificationEmail({
 												email,
-												callbackURL: "/verify-email",
+												callbackURL: "/dashboard",
 											});
 											setError(null);
 											setSuccessMessage(

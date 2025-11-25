@@ -50,7 +50,7 @@ export default function SignUpPage() {
 				email,
 				password,
 				name,
-				callbackURL: "/verify-email",
+				callbackURL: "/dashboard",
 			});
 
 			if (result.error) {

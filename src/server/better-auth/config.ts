@@ -4,13 +4,6 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { resend } from "~/server/email/resend";
-import { getEmailVerificationTemplate } from "~/server/email/templates";
-
-function getBaseUrl() {
-	if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-	if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-	return `http://localhost:${process.env.PORT ?? 3000}`;
-}
 
 export const auth = betterAuth({
 	database: prismaAdapter(db, {
@@ -21,24 +14,24 @@ export const auth = betterAuth({
 		requireEmailVerification: true,
 	},
 	emailVerification: {
-		sendVerificationEmail: async ({ user, url: _url, token: _token }) => {
-			// Better Auth provides the verification URL, but we want to redirect to our custom page
-			// So we construct our own URL that will handle the verification
-			const baseUrl = getBaseUrl();
-			// The verification URL should point to our verify-email page with the token
-			const verificationUrl = `${baseUrl}/verify-email?token=${_token}`;
-
-			const emailTemplate = getEmailVerificationTemplate({
-				verificationUrl,
-				userName: user.name ?? "there",
-			});
-
+		sendOnSignUp: true,
+		autoSignInAfterVerification: true,
+		sendVerificationEmail: async ({ user, url }) => {
 			await resend.emails.send({
 				from: "ResumeAI <onboarding@resend.dev>", // Update with your verified domain
 				to: user.email,
-				subject: emailTemplate.subject,
-				html: emailTemplate.html,
-				text: emailTemplate.text,
+				subject: "Verify your email address",
+				html: `
+					<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+						<h2 style="color: #333;">Verify your email address</h2>
+						<p>Hi ${user.name ?? "there"},</p>
+						<p>Thank you for signing up for ResumeAI! Please verify your email address by clicking the button below:</p>
+						<a href="${url}" style="display: inline-block; background-color: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0;">Verify Email Address</a>
+						<p style="color: #666; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
+						<p style="color: #667eea; word-break: break-all;">${url}</p>
+						<p style="color: #999; font-size: 12px; margin-top: 30px;">If you didn't create an account with ResumeAI, you can safely ignore this email.</p>
+					</div>
+				`,
 			});
 		},
 	},
