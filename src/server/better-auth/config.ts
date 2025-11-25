@@ -7,7 +7,7 @@ import { resend } from "~/server/email/resend";
 
 export const auth = betterAuth({
 	database: prismaAdapter(db, {
-		provider: "sqlite", // or "sqlite" or "mysql"
+		provider: "postgresql",
 	}),
 	emailAndPassword: {
 		enabled: true,
